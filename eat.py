@@ -22,17 +22,20 @@ assert os.path.exists(COMPLETE_FILE)
 
 VERBOSE = False
 
+translation_table_to_delete_chars = dict.fromkeys(map(ord, '!@#$;"'), None)
+
 def parse_profile_data_line(line):
     "returns stuff to right of ="
-    #  #set $sp364-value$ = "2014-09|2018-05|UNIV OF TORONTO|BSC H|2.88/4.0|||||||||||||||"; 
+    VERBOSE = True
+    # EG: #set $sp364-value$ = "2014-09|2018-05|UNIV OF TORONTO|BSC H|2.88/4.0|||||||||||||||"; 
     if VERBOSE: print("rhs",line)
     try:
         rhs = line.split("=")[1]
     except:
         print("failed to split = on ", line)
         exit(3)
-    #print("rhs",rhs)
-    return rhs.strip()
+    return rhs.strip().translate(translation_table_to_delete_chars)
+
 
 def completed_dict_from_applicationStatus_file(fn):
     with open(fn,"r") as apf:
@@ -136,6 +139,7 @@ if __name__ == '__main__':
             cv_fn =  fn(app_num,2)
             transcript_fn =  fn(app_num,3)
             if not app_num in completed_app_dict.keys():
+                continue
                 print("skip", app_num, "because not complete")
             elif not os.path.exists(transcript_fn):
                 print("skip", app_num, "because transcript does not exist")
@@ -160,12 +164,16 @@ if __name__ == '__main__':
         profile_data = app_num_to_profile_data[app_num]
         profile_data["DCS_UNION_INSTITUTION"]
         print(profile_data["SGS_NUM"],profile_data["DCS_UNION_INSTITUTION"])
+    print("===============================\n")
 
-    #make sure this list makes some kind of sense
-    response = input("prefilter above " + str(len(app_num_list)) + " applications? matching " +
+    try:
+        response = input("prefilter above " + str(len(app_num_list)) + " applications? matching " +
                          uni_filter_regexp + " (enter any char to BAIL OUT)> ")
-    if len(response) > 0 and not response.lower().startswith("y"):
-        print("wanted you to enter something to continue.. outa here")
+    except:
+        response = None
+        
+    if response == None or (len(response) > 0 and not response.lower().startswith("y")):
+        print("entering something bails out.. just enter to continue")
         exit(0)
 
     def read_query_from_input(prompt):
@@ -188,7 +196,8 @@ if __name__ == '__main__':
         """write all lines out to a new file name"""
         with open(fn,'w') as new_file:
             for k in dict.keys():
-                line = str(k)+","+str(dict[k])
+                line = k + "," + str(dict[k])
+                print(line)
                 print(line,file=new_file)
 
     from menu import PrefilterMenu
@@ -266,5 +275,4 @@ if __name__ == '__main__':
             
         
         
-                         
-                    
+                
