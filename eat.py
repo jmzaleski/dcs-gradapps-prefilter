@@ -113,7 +113,8 @@ if __name__ == '__main__':
         except EOFError:
             print("..eof..")
             return None
-    
+
+    viewer = "/Users/mzaleski/git/dcs-gradapps-prefilter/view-files.sh"
     for app_num in app_num_list:
         #os.system("ls -l " + DIR + app_num)
         #concoct path of app_num "papers"
@@ -124,7 +125,7 @@ if __name__ == '__main__':
         print(sop_fn,cv_fn,transcript_fn)
         xx = read_query_from_input(app_num)        
         #os.system("open " + sop_fn + " " + cv_fn + " " + transcript_fn)
-        os.system("/Users/mzaleski/go.sh " + sop_fn + " " + cv_fn + " " + transcript_fn)
+        os.system(viewer  + " " + sop_fn + " " + cv_fn + " " + transcript_fn)
         
         
                          
