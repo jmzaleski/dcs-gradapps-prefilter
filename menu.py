@@ -17,21 +17,19 @@ class PrefilterMenu(object):
         self.prompt = prompt
         assert len(menu_lines_dict.keys()) == len(key_list)
         for key in self.key_list:
-            assert len(self.menu_lines_dict[key])
+            assert self.menu_lines_dict[key] != None
         
     # print a cheesy little menu. If there is just one element in menu_lines_dict, then return 0
     # invalid or interrupt return -1
     # TODO: be nice to allow user to choose first char of line too.
     def menu(self):
-        print(self.key_list)
-        print(self.menu_lines_dict)
         if len(self.menu_lines_dict) == 1:
             return 0
         for key in self.key_list :
             print("%s %s" % (key, self.menu_lines_dict[key]))
         try:
             str_selection = input(self.prompt)  # this one for console.
-            print (">>" + str_selection + "<<")
+            #print (">>" + str_selection + "<<")
             if len(str_selection) == 0:
                 #print("len zero, returning first key")
                 return self.key_list[0] #just enter selects zero'th menu item
@@ -42,12 +40,12 @@ class PrefilterMenu(object):
                     return None
         except KeyboardInterrupt:
             #here if user types control-C (or whatever terminal key interrupts)
-            return -1
+            return None
         except EOFError:
-            return -1
+            return None
         except:
             print("interrupt.. prob invalid selection:", str_selection)
-            return -1
+            return None
 
 
     

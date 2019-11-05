@@ -37,18 +37,16 @@ def parse_profile_data_line(line):
 def completed_dict_from_applicationStatus_file(fn):
     with open(fn,"r") as apf:
         import re
-        rec = {}
+        map = {}
         for line in apf:
             fields = line.split(" ")
             assert len(fields) == 2
             if re.search("complete",fields[1]):
                 assert re.search("complete",line)
-                rec[fields[0]] = True
+                map[fields[0]] = True
             else:
-                rec[fields[0]] = False
-
-    print(rec)
-    return rec
+                map[fields[0]] = False
+    return map
 
 def dict_from_profile_data_file(fn):
     with open(fn,"r") as profile_data_file:
@@ -126,11 +124,9 @@ if __name__ == '__main__':
     completed_app_dict = completed_dict_from_applicationStatus_file(COMPLETE_FILE)
     
     (app_num_to_profile_data,sgs_num_to_profile_data) = build_dict_of_dicts(fn_file_list)
-    #print(sgs_num_to_profile_data)
-    
+
     app_num_list = []
     for app_num in app_num_to_profile_data.keys():
-        #print(app_num)
         profile_data = app_num_to_profile_data[app_num]
         institution = profile_data["DCS_UNION_INSTITUTION"]
         if not re.search(uni_filter_regexp, institution):
@@ -145,10 +141,18 @@ if __name__ == '__main__':
                 print("skip", app_num, "because transcript does not exist")
             elif not os.path.exists(sop_fn):
                 print("skip", app_num, "because SOP does not exist")
-            if not os.path.exists(cv_fn):
+            elif not os.path.exists(cv_fn):
                 print("skip", app_num, "because CV does not exist")
             else:
                 app_num_list.append(app_num)
+            # if re.search("303",app_num):
+            #     print("hello")
+            #     print(">>"+app_num+"<<")
+            #     assert not "303" in completed_app_dict.keys()
+            #     if not app_num in completed_app_dict.keys():
+            #         print("there")
+            #         print(app_num_list)
+            #     exit(0)
 
                 
     print("\n\n===============================\nAPPS matching: ",uni_filter_regexp)
@@ -159,12 +163,10 @@ if __name__ == '__main__':
 
     #make sure this list makes some kind of sense
     response = input("prefilter above " + str(len(app_num_list)) + " applications? matching " +
-                         uni_filter_regexp + " (enter any char to continue)> ")
-    if len(response) == 0 :
+                         uni_filter_regexp + " (enter any char to BAIL OUT)> ")
+    if len(response) > 0 and not response.lower().startswith("y"):
         print("wanted you to enter something to continue.. outa here")
         exit(0)
-        
-
 
     def read_query_from_input(prompt):
         "UI read a line from stdin"
@@ -190,30 +192,42 @@ if __name__ == '__main__':
                 print(line,file=new_file)
 
     from menu import PrefilterMenu
-    response_list = ['L','S']
-    response_menu_line_dict = {'L': "app loses, reject", 'S':"super app, examine immediately"}
+    #response_list = ['L','S']
+    #response_menu_line_dict = {'L': "app loses, reject", 'S':"super app, examine immediately"}
     from enum import Enum
     class DCS_PREFILTER_DECISION(Enum):
-        PassStar = 1
-        PassVGE= 2
-        PassG = 3
-        NCSReject = 4
-        NCSPass = 5
-        Unsure = 6
-        Reject = 7
-        
-    response_code_dict = { 's' : DCS_PREFILTER_DECISION.PassStar,
-                           'v' : DCS_PREFILTER_DECISION.PassVGE,
-                           'g' : DCS_PREFILTER_DECISION.PassG,
-                           'u' : DCS_PREFILTER_DECISION.Unsure,
-                           'r' : DCS_PREFILTER_DECISION.Reject,
-                           'x' : DCS_PREFILTER_DECISION.NCSReject,
-                           'y' : DCS_PREFILTER_DECISION.NCSPass,
+        PassStar  = "Pass-Star"
+        PassVGE   = "Pass-VGE"
+        PassG     = "Pass-G"
+        NCSReject = "NCS-Reject"
+        NCSPass   = "NCS-Pass"
+        Unsure    = "Unsure"
+        Reject    = "Reject"
+
+    # what to display in menu
+    menu_line_dict = { 's' : "Pass-Star:    Star applicant pass prefilter. maybe early admission",
+                           'v' : "Pass-VGE:     Very Good applicant. pass prefilter",
+                           'g' : "Pass-G:       Good applicant. pass prefilter",
+                           'u' : "Unsure:       whether this applicant should pass prefilter",
+                           'r' : "Reject:       Reject application. fails prefilter",
+                           'x' : "NCS-Reject:   not enough CS. Fails prefilter",
+                           'y' : "NCS-Pass:     not enough CS but stellar enough to pass prefilter"
+                        }
+    #order to display menu items in 
+    response_code_list = ['r', 's','v','g','u','x','y']
+
+    #map responses to gradapps prefilter status column values
+    gradapps_response_map = { 's' : "Pass-Star",
+                           'v' : "Pass-VGE",
+                           'g' : "Pass-G",
+                           'u' : "Unsure",
+                           'r' : "Reject",
+                           'x' : "NCS-Reject",
+                           'y' : "NCS-Pass",
                         }
     
-    menu = PrefilterMenu(response_list, response_menu_line_dict ,"enter a letter followed by enter> ")
-    # menu = PrefilterMenu(['x','y'], {'x': "xxxx", 'y':"yyyy"},"prompt> ")
-
+    menu = PrefilterMenu(response_code_list, menu_line_dict ,"enter a letter followed by enter> ")
+    
     decisions = {}
     for app_num in app_num_list:
         #concoct path of app_num "papers"
@@ -225,35 +239,32 @@ if __name__ == '__main__':
         os.system(VIEWER  + " " + sop_fn + " " + cv_fn + " " + transcript_fn)
         resp = ""
         while True:
-            print("enter dcs prefilter status for application",app_num)
+            print("choose dcs prefilter status for application",app_num,"from menu below")
             resp = menu.menu()
-            print("resp:", resp, response_code_dict[resp])
-
-            #resp = read_query_from_input("decision code for applicant number " + app_num + " (enter to continue)> ")
             if resp == None:
+                print("\n\nwonky reponse (interrupt key pressed?) from menu",resp)
+                continue
+            gradapps_response = gradapps_response_map[resp]
+            #print("resp:", resp, gradapps_response)
+
+            if gradapps_response == None:
                 print("gotta choose something here. looping around")
                 continue
             print(resp)
             try:
                 #copy fn to backup
-                dcs_response_enum = response_code_dict[resp]
                 profile_data = app_num_to_profile_data[app_num]
-                decisions[profile_data["SGS_NUM"]] = dcs_response_enum
+                decisions[profile_data["SGS_NUM"]] = gradapps_response
                 write_to_new_file("/tmp/out", decisions) # yeah, write every time
             except:
                 print("something when wrong writing.. please try enter", resp,"again")
                 resp = ""
                 continue
             break
-
+        
     print(decisions)
             
         
         
                          
-                         
-
-        
-
-
-         
+                    
