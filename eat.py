@@ -16,6 +16,10 @@ assert os.path.exists(MASC_PAPERS_DIR)
 VIEWER = os.path.join(TOOLS_DIR,"view-files.sh")
 assert os.path.exists(VIEWER)
 
+#file listing which apps are complete
+COMPLETE_FILE = os.path.join(MASC_UNZIP_DIR,"public_html/admin/applicationStatus")
+assert os.path.exists(COMPLETE_FILE)
+
 VERBOSE = False
 
 def parse_profile_data_line(line):
@@ -29,7 +33,23 @@ def parse_profile_data_line(line):
         exit(3)
     #print("rhs",rhs)
     return rhs.strip()
-    
+
+def completed_dict_from_applicationStatus_file(fn):
+    with open(fn,"r") as apf:
+        import re
+        rec = {}
+        for line in apf:
+            fields = line.split(" ")
+            assert len(fields) == 2
+            if re.search("complete",fields[1]):
+                assert re.search("complete",line)
+                rec[fields[0]] = True
+            else:
+                rec[fields[0]] = False
+
+    print(rec)
+    return rec
+
 def dict_from_profile_data_file(fn):
     with open(fn,"r") as profile_data_file:
         import re
@@ -102,6 +122,8 @@ if __name__ == '__main__':
     for dir in [TOOLS_DIR]:
         sys.path.append(dir)
     (fn_file_list,uni_filter_regexp) = parse_positional_args()
+
+    completed_app_dict = completed_dict_from_applicationStatus_file(COMPLETE_FILE)
     
     (app_num_to_profile_data,sgs_num_to_profile_data) = build_dict_of_dicts(fn_file_list)
     #print(sgs_num_to_profile_data)
@@ -117,8 +139,9 @@ if __name__ == '__main__':
             sop_fn =  fn(app_num,1)
             cv_fn =  fn(app_num,2)
             transcript_fn =  fn(app_num,3)
-
-            if not os.path.exists(transcript_fn):
+            if not app_num in completed_app_dict.keys():
+                print("skip", app_num, "because not complete")
+            elif not os.path.exists(transcript_fn):
                 print("skip", app_num, "because transcript does not exist")
             elif not os.path.exists(sop_fn):
                 print("skip", app_num, "because SOP does not exist")
