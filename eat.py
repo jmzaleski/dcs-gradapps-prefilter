@@ -26,7 +26,7 @@ def parse_profile_data_line(line):
         print("failed to split = on ", line)
         exit(3)
     #print("rhs",rhs)
-    return rhs
+    return rhs.strip()
     
 def dict_from_profile_data_file(fn):
     with open(fn,"r") as profile_data_file:
@@ -83,8 +83,12 @@ def parse_positional_args():
     parser.add_argument(
         "fn_of_list_of_profile_data", help="likely fn containing find . -name profile.data"
         )
+    parser.add_argument(
+        "uni_filter_regexp", help="university to filter by"
+        )
+
     args = parser.parse_args()
-    return args.fn_of_list_of_profile_data
+    return (args.fn_of_list_of_profile_data, args.uni_filter_regexp)
 
 if __name__ == '__main__': 
     import sys
@@ -93,19 +97,35 @@ if __name__ == '__main__':
     #duplicate. sorta. so works on mac and windows laptops
     for dir in [TOOLS_DIR]:
         sys.path.append(dir)
-    fn_file_list = parse_positional_args() #eg: /tmp/xxx
+    (fn_file_list,uni_filter_regexp) = parse_positional_args()
+    
     (app_num_to_profile_data,sgs_num_to_profile_data) = build_dict_of_dicts(fn_file_list)
     #print(sgs_num_to_profile_data)
+    
     app_num_list = []
     for app_num in app_num_to_profile_data.keys():
         #print(app_num)
         profile_data = app_num_to_profile_data[app_num]
         institution = profile_data["DCS_UNION_INSTITUTION"]
-        if re.search("TORONTO", institution):
+        if re.search(uni_filter_regexp, institution):
             #print(profile_data)
-            print(app_num,institution)
+            print(app_num,institution.strip())
             app_num_list.append(app_num)
-    print(app_num_list)
+        else:
+            print("skip", app_num, "because", institution, "not matched by", uni_filter_regexp)
+
+    print("\n\n===============================\nMATCHED APPS")
+    for app_num in app_num_list:
+        profile_data = app_num_to_profile_data[app_num]
+        profile_data["DCS_UNION_INSTITUTION"]
+        print(profile_data["SGS_NUM"],profile_data["DCS_UNION_INSTITUTION"])
+
+    #make sure this list makes some kind of sense
+    response = input("prefilter above " + str(len(app_num_list)) + " applications?")
+    if len(response) == 0 :
+        print("wanted you to enter something to continue.. outa here")
+        exit(0)
+        
 
     def fn(n,nn):
         return MASC_PAPERS_DIR + n + "/file" + n + "-" + str(nn) + ".pdf"
@@ -126,6 +146,7 @@ if __name__ == '__main__':
             print("..eof..")
             return None
 
+    verbose = False
     for app_num in app_num_list:
         #os.system("ls -l " + DIR + app_num)
         #concoct path of app_num "papers"
@@ -134,13 +155,13 @@ if __name__ == '__main__':
         cv_fn =  fn(app_num,2)
         transcript_fn =  fn(app_num,3)
         if not os.path.exists(transcript_fn):
-            print("skip", app_num, "because transcript does not exist")
+            if verbose: print("skip", app_num, "because transcript does not exist")
             continue
         if not os.path.exists(sop_fn):
-            print("skip", app_num, "because SOP does not exist")
+            if verbose: print("skip", app_num, "because SOP does not exist")
             continue
         if not os.path.exists(cv_fn):
-            print("skip", app_num, "because CV does not exist")
+            if verbose: print("skip", app_num, "because CV does not exist")
             continue
         print(os.path.basename(sop_fn),os.path.basename(cv_fn),os.path.basename(transcript_fn))
         xx = read_query_from_input(app_num)        
