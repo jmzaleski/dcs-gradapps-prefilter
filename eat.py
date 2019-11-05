@@ -165,6 +165,12 @@ if __name__ == '__main__':
                 line = str(k)+","+str(dict[k])
                 print(line,file=new_file)
 
+    from menu import PrefilterMenu
+    menu = PrefilterMenu(['x','y'], {'x': "xxxx", 'y':"yyyy"},"prompt")
+    resp = menu.menu()
+    print("resp")
+    exit(0)
+
     decisions = {}
     for app_num in app_num_list:
         #concoct path of app_num "papers"
