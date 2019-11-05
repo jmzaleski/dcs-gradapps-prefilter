@@ -117,6 +117,7 @@ if __name__ == '__main__':
             sop_fn =  fn(app_num,1)
             cv_fn =  fn(app_num,2)
             transcript_fn =  fn(app_num,3)
+
             if not os.path.exists(transcript_fn):
                 print("skip", app_num, "because transcript does not exist")
             elif not os.path.exists(sop_fn):
@@ -166,10 +167,29 @@ if __name__ == '__main__':
                 print(line,file=new_file)
 
     from menu import PrefilterMenu
-    menu = PrefilterMenu(['x','y'], {'x': "xxxx", 'y':"yyyy"},"prompt")
-    resp = menu.menu()
-    print("resp")
-    exit(0)
+    response_list = ['L','S']
+    response_menu_line_dict = {'L': "app loses, reject", 'S':"super app, examine immediately"}
+    from enum import Enum
+    class DCS_PREFILTER_DECISION(Enum):
+        PassStar = 1
+        PassVGE= 2
+        PassG = 3
+        NCSReject = 4
+        NCSPass = 5
+        Unsure = 6
+        Reject = 7
+        
+    response_code_dict = { 's' : DCS_PREFILTER_DECISION.PassStar,
+                           'v' : DCS_PREFILTER_DECISION.PassVGE,
+                           'g' : DCS_PREFILTER_DECISION.PassG,
+                           'u' : DCS_PREFILTER_DECISION.Unsure,
+                           'r' : DCS_PREFILTER_DECISION.Reject,
+                           'x' : DCS_PREFILTER_DECISION.NCSReject,
+                           'y' : DCS_PREFILTER_DECISION.NCSPass,
+                        }
+    
+    menu = PrefilterMenu(response_list, response_menu_line_dict ,"enter a letter followed by enter> ")
+    # menu = PrefilterMenu(['x','y'], {'x': "xxxx", 'y':"yyyy"},"prompt> ")
 
     decisions = {}
     for app_num in app_num_list:
@@ -182,16 +202,20 @@ if __name__ == '__main__':
         os.system(VIEWER  + " " + sop_fn + " " + cv_fn + " " + transcript_fn)
         resp = ""
         while True:
-            #here matzmenu..
-            resp = read_query_from_input("decision code for applicant number " + app_num + " (enter to continue)> ")
-            if len(resp) == 0:
-                print("gotta say something")
+            print("enter dcs prefilter status for application",app_num)
+            resp = menu.menu()
+            print("resp:", resp, response_code_dict[resp])
+
+            #resp = read_query_from_input("decision code for applicant number " + app_num + " (enter to continue)> ")
+            if resp == None:
+                print("gotta choose something here. looping around")
                 continue
             print(resp)
-            profile_data = app_num_to_profile_data[app_num]
-            decisions[profile_data["SGS_NUM"]] = resp
             try:
                 #copy fn to backup
+                dcs_response_enum = response_code_dict[resp]
+                profile_data = app_num_to_profile_data[app_num]
+                decisions[profile_data["SGS_NUM"]] = dcs_response_enum
                 write_to_new_file("/tmp/out", decisions) # yeah, write every time
             except:
                 print("something when wrong writing.. please try enter", resp,"again")
