@@ -1,6 +1,20 @@
 from __future__ import print_function  #allows print as function
+import os.path
 
+HOME_DIR="/Users/mzaleski"
+assert os.path.exists(HOME_DIR)
 
+TOOLS_DIR = os.path.join(HOME_DIR,"git/dcs-gradapps-prefilter/")
+assert os.path.exists(TOOLS_DIR)
+
+MASC_UNZIP_DIR = os.path.join(HOME_DIR,"mscac/home/gradbackup/archive/mscac.2020/mscac20")
+assert os.path.exists(MASC_UNZIP_DIR)
+    
+MASC_PAPERS_DIR = os.path.join(MASC_UNZIP_DIR,"public_html/papers/")
+assert os.path.exists(MASC_PAPERS_DIR)
+
+VIEWER = os.path.join(TOOLS_DIR,"view-files.sh")
+assert os.path.exists(VIEWER)
 
 def parse_profile_data_line(line):
     "returns stuff to right of ="
@@ -77,7 +91,7 @@ if __name__ == '__main__':
     import os
     import re
     #duplicate. sorta. so works on mac and windows laptops
-    for dir in ['/Users/mzaleski/git/dcs-gradapps-prefilter/']:
+    for dir in [TOOLS_DIR]:
         sys.path.append(dir)
     fn_file_list = parse_positional_args() #eg: /tmp/xxx
     (app_num_to_profile_data,sgs_num_to_profile_data) = build_dict_of_dicts(fn_file_list)
@@ -93,10 +107,8 @@ if __name__ == '__main__':
             app_num_list.append(app_num)
     print(app_num_list)
 
-    DIR = "/Users/mzaleski/mscac/home/gradbackup/archive/mscac.2020/mscac20/public_html/papers/"
-
     def fn(n,nn):
-        return DIR + n + "/file" + n + "-" + str(nn) + ".pdf"
+        return MASC_PAPERS_DIR + n + "/file" + n + "-" + str(nn) + ".pdf"
 
     def read_query_from_input(prompt):
         "UI read a line from stdin"
@@ -114,7 +126,6 @@ if __name__ == '__main__':
             print("..eof..")
             return None
 
-    viewer = "/Users/mzaleski/git/dcs-gradapps-prefilter/view-files.sh"
     for app_num in app_num_list:
         #os.system("ls -l " + DIR + app_num)
         #concoct path of app_num "papers"
@@ -122,10 +133,19 @@ if __name__ == '__main__':
         sop_fn =  fn(app_num,1)
         cv_fn =  fn(app_num,2)
         transcript_fn =  fn(app_num,3)
-        print(sop_fn,cv_fn,transcript_fn)
+        if not os.path.exists(transcript_fn):
+            print("skip", app_num, "because transcript does not exist")
+            continue
+        if not os.path.exists(sop_fn):
+            print("skip", app_num, "because SOP does not exist")
+            continue
+        if not os.path.exists(cv_fn):
+            print("skip", app_num, "because CV does not exist")
+            continue
+        print(os.path.basename(sop_fn),os.path.basename(cv_fn),os.path.basename(transcript_fn))
         xx = read_query_from_input(app_num)        
         #os.system("open " + sop_fn + " " + cv_fn + " " + transcript_fn)
-        os.system(viewer  + " " + sop_fn + " " + cv_fn + " " + transcript_fn)
+        os.system(VIEWER  + " " + sop_fn + " " + cv_fn + " " + transcript_fn)
         
         
                          
