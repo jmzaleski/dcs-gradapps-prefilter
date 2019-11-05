@@ -6,7 +6,7 @@ for i in $*
 do
 	if test -f $i
 	then
-		ls -l $i
+		#ls -l $i
 		open -a Preview.app $i
 	else
 		echo sorry $i not found
