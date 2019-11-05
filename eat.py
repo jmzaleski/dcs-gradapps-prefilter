@@ -158,11 +158,12 @@ if __name__ == '__main__':
             print("..eof..")
             return None
 
-    def write_to_new_file(self,fn,list):
+    def write_to_new_file(fn,dict):
         """write all lines out to a new file name"""
         with open(fn,'w') as new_file:
-            for o in list:
-                print(o, file=new_file)
+            for k in dict.keys():
+                line = str(k)+","+str(dict[k])
+                print(line,file=new_file)
 
     decisions = {}
     for app_num in app_num_list:
@@ -183,6 +184,13 @@ if __name__ == '__main__':
             print(resp)
             profile_data = app_num_to_profile_data[app_num]
             decisions[profile_data["SGS_NUM"]] = resp
+            try:
+                #copy fn to backup
+                write_to_new_file("/tmp/out", decisions) # yeah, write every time
+            except:
+                print("something when wrong writing.. please try enter", resp,"again")
+                resp = ""
+                continue
             break
 
     print(decisions)
