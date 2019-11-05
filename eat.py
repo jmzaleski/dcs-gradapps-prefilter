@@ -16,10 +16,12 @@ assert os.path.exists(MASC_PAPERS_DIR)
 VIEWER = os.path.join(TOOLS_DIR,"view-files.sh")
 assert os.path.exists(VIEWER)
 
+VERBOSE = False
+
 def parse_profile_data_line(line):
     "returns stuff to right of ="
     #  #set $sp364-value$ = "2014-09|2018-05|UNIV OF TORONTO|BSC H|2.88/4.0|||||||||||||||"; 
-    print("rhs",line)
+    if VERBOSE: print("rhs",line)
     try:
         rhs = line.split("=")[1]
     except:
@@ -50,7 +52,6 @@ def parse_dir_path_for_app_number(path):
         l = path.split("public_html/data")
         d = l[1].split("/")
         app_num = d[1]
-        print(path,app_num)
         return  app_num
     except:
         print("failed: split on public_html/data of ", path)
@@ -90,6 +91,9 @@ def parse_positional_args():
     args = parser.parse_args()
     return (args.fn_of_list_of_profile_data, args.uni_filter_regexp)
 
+def fn(n,nn):
+    return MASC_PAPERS_DIR + n + "/file" + n + "-" + str(nn) + ".pdf"
+
 if __name__ == '__main__': 
     import sys
     import os
@@ -107,28 +111,36 @@ if __name__ == '__main__':
         #print(app_num)
         profile_data = app_num_to_profile_data[app_num]
         institution = profile_data["DCS_UNION_INSTITUTION"]
-        if re.search(uni_filter_regexp, institution):
-            #print(profile_data)
-            print(app_num,institution.strip())
-            app_num_list.append(app_num)
+        if not re.search(uni_filter_regexp, institution):
+            if VERBOSE: print("skip", app_num, "because", institution, "not matched by", uni_filter_regexp)
         else:
-            print("skip", app_num, "because", institution, "not matched by", uni_filter_regexp)
+            sop_fn =  fn(app_num,1)
+            cv_fn =  fn(app_num,2)
+            transcript_fn =  fn(app_num,3)
+            if not os.path.exists(transcript_fn):
+                print("skip", app_num, "because transcript does not exist")
+            elif not os.path.exists(sop_fn):
+                print("skip", app_num, "because SOP does not exist")
+            if not os.path.exists(cv_fn):
+                print("skip", app_num, "because CV does not exist")
+            else:
+                app_num_list.append(app_num)
 
-    print("\n\n===============================\nMATCHED APPS")
+                
+    print("\n\n===============================\nAPPS matching: ",uni_filter_regexp)
     for app_num in app_num_list:
         profile_data = app_num_to_profile_data[app_num]
         profile_data["DCS_UNION_INSTITUTION"]
         print(profile_data["SGS_NUM"],profile_data["DCS_UNION_INSTITUTION"])
 
     #make sure this list makes some kind of sense
-    response = input("prefilter above " + str(len(app_num_list)) + " applications?")
+    response = input("prefilter above " + str(len(app_num_list)) + " applications? matching " +
+                         uni_filter_regexp + " (enter any char to continue)> ")
     if len(response) == 0 :
         print("wanted you to enter something to continue.. outa here")
         exit(0)
         
 
-    def fn(n,nn):
-        return MASC_PAPERS_DIR + n + "/file" + n + "-" + str(nn) + ".pdf"
 
     def read_query_from_input(prompt):
         "UI read a line from stdin"
@@ -146,27 +158,35 @@ if __name__ == '__main__':
             print("..eof..")
             return None
 
-    verbose = False
+    def write_to_new_file(self,fn,list):
+        """write all lines out to a new file name"""
+        with open(fn,'w') as new_file:
+            for o in list:
+                print(o, file=new_file)
+
+    decisions = {}
     for app_num in app_num_list:
-        #os.system("ls -l " + DIR + app_num)
         #concoct path of app_num "papers"
         # file-NNN-1.pdf is transcript
         sop_fn =  fn(app_num,1)
         cv_fn =  fn(app_num,2)
         transcript_fn =  fn(app_num,3)
-        if not os.path.exists(transcript_fn):
-            if verbose: print("skip", app_num, "because transcript does not exist")
-            continue
-        if not os.path.exists(sop_fn):
-            if verbose: print("skip", app_num, "because SOP does not exist")
-            continue
-        if not os.path.exists(cv_fn):
-            if verbose: print("skip", app_num, "because CV does not exist")
-            continue
         print(os.path.basename(sop_fn),os.path.basename(cv_fn),os.path.basename(transcript_fn))
-        xx = read_query_from_input(app_num)        
-        #os.system("open " + sop_fn + " " + cv_fn + " " + transcript_fn)
         os.system(VIEWER  + " " + sop_fn + " " + cv_fn + " " + transcript_fn)
+        resp = ""
+        while True:
+            #here matzmenu..
+            resp = read_query_from_input("decision code for applicant number " + app_num + " (enter to continue)> ")
+            if len(resp) == 0:
+                print("gotta say something")
+                continue
+            print(resp)
+            profile_data = app_num_to_profile_data[app_num]
+            decisions[profile_data["SGS_NUM"]] = resp
+            break
+
+    print(decisions)
+            
         
         
                          
