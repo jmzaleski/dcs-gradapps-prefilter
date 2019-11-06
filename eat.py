@@ -16,8 +16,12 @@ MASC_UNZIP_DIR = os.path.join(HOME_DIR,"mscac/home/gradbackup/archive/mscac.2020
 if not os.path.exists(MASC_UNZIP_DIR): die(MASC_UNZIP_DIR, "does not exist")
 
 #dir where transcripts, sop, cv live
-MASC_PAPERS_DIR = os.path.join(MASC_UNZIP_DIR,"public_html/papers/")
+MASC_PAPERS_DIR = os.path.join(MASC_UNZIP_DIR,"public_html","papers")
 assert os.path.exists(MASC_PAPERS_DIR)
+
+#dir where application dirs containing profile.data live
+MASC_PROFILE_DATA_ROOT_DIR = os.path.join(MASC_UNZIP_DIR,"public_html","data")
+assert os.path.exists(MASC_PROFILE_DATA_ROOT_DIR)
 
 #shell script to fire up viewers on PDF files
 VIEWER = os.path.join(TOOLS_DIR,"view-files.sh")
@@ -26,7 +30,6 @@ assert os.path.exists(VIEWER)
 #file listing which apps are complete
 COMPLETE_FILE = os.path.join(MASC_UNZIP_DIR,"public_html/admin/applicationStatus")
 assert os.path.exists(COMPLETE_FILE)
-
 
 VERBOSE = False
 
@@ -97,8 +100,36 @@ def parse_dir_path_for_app_number(path):
     except:
         print("failed: split on public_html/data of ", path)
         exit(3)
-    
-def build_dict_of_dicts(fn):
+
+def concoct_profile_data_file_name_from_app_number(app_num):
+    """concoct full path of profile.data file from app_num.
+       Depends on inside knowledge of how gradapps stores its stuff"""
+    profile_data_fn = os.path.join(MASC_PROFILE_DATA_ROOT_DIR,app_num,"profile.data")
+    assert os.path.exists(profile_data_fn)
+    return profile_data_fn
+
+def build_dict_of_dicts(fn_of_app_numbers):
+    """read the listed app_num's, concoct the path to the profile.data file and turn the data there into a dict"""
+    profile_data_by_app_number = {}
+    profile_data_by_sgs_number = {}
+    try:
+         with open(fn_file_list, "r") as in_file:
+             for l in in_file:
+                 #app_num = parse_dir_path_for_app_number(l)
+                 app_num = l.strip()
+                 d = dict_from_profile_data_file(concoct_profile_data_file_name_from_app_number(app_num))
+                 profile_data_by_app_number[app_num] = d
+                 profile_data_by_sgs_number[d["SGS_NUM"]] = d
+         #print(profile_data_by_sgs_number)
+    except:
+         print(fn_file_list, "failed to open for read? really? bail!")
+         import traceback
+         traceback.print_exc(file=sys.stdout)
+         exit(3)
+         return None
+    return (profile_data_by_app_number, profile_data_by_sgs_number)
+
+def build_dict_of_dicts_filenames(fn):
     """read the listed profile.data files and turn the row in each into a dict
     the file name passed in fn was written by doing a find . -name profile.data"""
     profile_data_by_app_number = {}
@@ -134,7 +165,8 @@ def parse_positional_args():
     return (args.fn_of_list_of_profile_data, args.uni_filter_regexp)
 
 def fn(n,nn):
-    return MASC_PAPERS_DIR + n + "/file" + n + "-" + str(nn) + ".pdf"
+    "concoct full path to transcript, cv, sop files in papers dir"
+    return os.path.join(MASC_PAPERS_DIR, str(n), "file" + n + "-" + str(nn) + ".pdf")
 
 if __name__ == '__main__': 
     import sys
@@ -149,6 +181,10 @@ if __name__ == '__main__':
     
     (app_num_to_profile_data,sgs_num_to_profile_data) = build_dict_of_dicts(fn_file_list)
 
+    if VERBOSE:
+        print(app_num_to_profile_data)
+        print(sgs_num_to_profile_data)
+        
     app_num_list = []
     for app_num in app_num_to_profile_data.keys():
         profile_data = app_num_to_profile_data[app_num]
@@ -163,13 +199,14 @@ if __name__ == '__main__':
                 continue
                 print("skip", app_num, "because not complete")
             elif not os.path.exists(transcript_fn):
-                print("skip", app_num, "because transcript does not exist")
+                print("skip", app_num, "because transcript does not exist",transcript_fn)
             elif not os.path.exists(sop_fn):
                 print("skip", app_num, "because SOP does not exist")
             elif not os.path.exists(cv_fn):
                 print("skip", app_num, "because CV does not exist")
             else:
                 app_num_list.append(app_num)
+    print(app_num_list)
 
     #try and sort app_num_list by GPA
     def extract_gpa(app_num):
