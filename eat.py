@@ -155,14 +155,14 @@ def parse_positional_args():
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "fn_of_list_of_profile_data", help="likely fn containing find . -name profile.data"
+        "fn_of_list_of_app_nums", help="likely fn containing find . -name profile.data| sed See find-profile-data-app-numbers.sh"
         )
     parser.add_argument(
         "uni_filter_regexp", help="university to filter by"
         )
 
     args = parser.parse_args()
-    return (args.fn_of_list_of_profile_data, args.uni_filter_regexp)
+    return (args.fn_of_list_of_app_nums, args.uni_filter_regexp)
 
 def fn(n,nn):
     "concoct full path to transcript, cv, sop files in papers dir"
