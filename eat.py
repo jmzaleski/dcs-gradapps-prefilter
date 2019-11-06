@@ -1,5 +1,9 @@
 from __future__ import print_function  #allows print as function
-import os.path
+import sys, os.path
+
+def die(*objs):
+    print("ERROR: ", *objs, file=sys.stderr)
+    exit(42)
 
 HOME_DIR="/Users/mzaleski"
 assert os.path.exists(HOME_DIR)
@@ -9,7 +13,7 @@ assert os.path.exists(TOOLS_DIR)
 
 #root of unzipped archive of gradapps files
 MASC_UNZIP_DIR = os.path.join(HOME_DIR,"mscac/home/gradbackup/archive/mscac.2020/mscac20")
-assert os.path.exists(MASC_UNZIP_DIR)
+if not os.path.exists(MASC_UNZIP_DIR): die(MASC_UNZIP_DIR, "does not exist")
 
 #dir where transcripts, sop, cv live
 MASC_PAPERS_DIR = os.path.join(MASC_UNZIP_DIR,"public_html/papers/")
@@ -23,8 +27,17 @@ assert os.path.exists(VIEWER)
 COMPLETE_FILE = os.path.join(MASC_UNZIP_DIR,"public_html/admin/applicationStatus")
 assert os.path.exists(COMPLETE_FILE)
 
+
 VERBOSE = False
 
+#output file directory
+MASC_PREFILTER_DIR_NAME = "masc-prefilter"
+OFN_DIR=os.path.join(HOME_DIR,MASC_PREFILTER_DIR_NAME)
+if not os.path.exists(OFN_DIR): die("OFN_DIR", OFN_DIR, "does not exist")
+
+# where to rsync output file for gradapps
+CSLAB_USERID = 'matz@apps1.cs.toronto.edu'
+    
 #obscure python way of deleting chars from unicode strings..
 translation_table_to_delete_chars = dict.fromkeys(map(ord, '!@#$;"'), None)
 
@@ -208,6 +221,9 @@ if __name__ == '__main__':
 
     def write_to_new_file(fn,dict):
         """write all lines out to a new file name"""
+        if os.path.exists(fn):
+            os.system("mv %s %s" % (fn, "/tmp"))
+        print("existing %s moved to /tmp" % fn)
         with open(fn,'w') as new_file:
             for k in dict.keys():
                 line = k + "," + str(dict[k])
@@ -240,8 +256,15 @@ if __name__ == '__main__':
     
     menu = PrefilterMenu(response_code_list, menu_line_dict ,"enter a letter followed by enter> ")
 
-    OFN = "/tmp/prefiltered.csv"
-    #TODO: move existing OFN aside in safe way.
+    import uuid #universal unique resource naming thingy
+    OFN_basename = "dcs-prefilter" + str(uuid.uuid4()) + ".csv"
+    OFN = os.path.join(OFN_DIR,OFN_basename)
+    assert not os.path.exists(OFN)
+    write_to_new_file(OFN,{}) #test write junk to OFN to make sure have perms and all that
+    
+    #########
+    # main loop asking for decisions and writing them (paranoidly) away
+    #########
     decisions = {}
     for app_num in app_num_list:
         #concoct path of app_num "papers"
@@ -257,7 +280,8 @@ if __name__ == '__main__':
         while True:
             print("choose dcs prefilter status for application",app_num,"from menu below")
             print(app_num_to_profile_data[app_num]["DCS_UNION_INSTITUTION"])
-
+            
+            ########## menu for actual decision 
             resp = menu.menu()
             if resp == None:
                 print("\n\nwonky reponse (interrupt key pressed?) from menu",resp)
@@ -270,20 +294,51 @@ if __name__ == '__main__':
                 continue
             print(resp)
             try:
-                #copy fn to backup
                 profile_data = app_num_to_profile_data[app_num]
                 decisions[profile_data["SGS_NUM"]] = gradapps_response
-                write_to_new_file(OFN, decisions) # yeah, write every time
-            except:
-                print("something when wrong writing.. please try enter", resp,"again")
+            
+                ########## paranoidly, write every time
+                # megaparanoid would be to copy file each time to tmp
+                write_to_new_file(OFN, decisions) # 
+            #except:
+            except Exception as e:
+                print(e)
+                import traceback
+                traceback.print_exc(file=sys.stderr)
+                print(OFN, "something when wrong writing.. please try enter", resp,"again")
+                print("""Note: if you get stuck looping in here only way out is to control-z and kill this job""")
                 resp = ""
                 continue
             break
-        
+
+    #########
+    # rest of script largely BS for convenience putting the output somewhere useful
+    #########
     print(decisions)
-    print(OFN)
     os.system("cat " + OFN)
-            
-        
-        
-                
+    os.system("ls -l " + OFN)
+    print("""to import these prefilter decisions into the gradapps system:
+    1. copy to file on apps1 
+    2. curl to gradapps server""")
+    print("\n=========================\n...and execute following commands:\n")
+    dest = "%s:%s/" % (CSLAB_USERID, MASC_PREFILTER_DIR_NAME)
+    rsync_cmd = "rsync  %s %s" %  (OFN, dest)
+    curl_cmd =  'curl -F appsFile="%s" "%s"' % (
+        OFN_basename,
+        'https://confs.precisionconference.com/~mscac20/uploadApps?config=prefilter&pass=StayorGo'
+        )
+
+    # probably will need ssh config support or will prompt for password
+    print(rsync_cmd)
+    print(curl_cmd)
+    print("\n=========================\n")
+    resp = input("hit Enter to exec rsync above (control-c only way to skip rsync) > ")
+    os.system(rsync_cmd)
+
+    print("now check file arrived by remote ls -ltr of dest dir")
+    os.system("ssh %s ls -ltr %s" % (CSLAB_USERID, MASC_PREFILTER_DIR_NAME))
+    print("\nlast file of above ls -ltr should have be:   ", OFN_basename)
+
+    print("\nnow ssh to", CSLAB_USERID, "and curl file to gradapps\n")
+    print(curl_cmd)
+    
