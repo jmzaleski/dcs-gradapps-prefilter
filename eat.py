@@ -90,6 +90,14 @@ def dict_from_profile_data_file(fn):
             elif re.search("sp363-value",line):
                 if VERBOSE: print("status", line)
                 rec["DCS_STATUS"] = parse_profile_data_line(line)
+            elif re.search("sp29-value",line):
+                rec["UNI_1"] = parse_profile_data_line(line)
+            elif re.search("sp35-value",line):
+                rec["GPA_1"] = parse_profile_data_line(line)
+            elif re.search("sp87-value",line):
+                rec["UNI_2"] = parse_profile_data_line(line)
+            elif re.search("sp92-value",line):
+                rec["GPA_2"] = parse_profile_data_line(line)
         return rec
 
 def parse_dir_path_for_app_number(path):
@@ -209,9 +217,37 @@ if __name__ == '__main__':
                 app_num_list.append(app_num)
     print(app_num_list)
 
+
+    def extract_gpa(profile_data, u_field_name,gpa_field_name):
+        if not u_field_name in profile_data.keys():
+            return None
+        uni = profile_data[u_field_name]
+        if not re.search(uni_filter_regexp, uni):
+            return None
+        if not gpa_field_name in profile_data:
+            return None
+        gpa_str = profile_data[gpa_field_name]
+        try:
+            return float(gpa_str)
+        except:
+            return None
+
+    def extract_gpa_from_multiple_fields(profile_data):
+        gpa1 = extract_gpa(profile_data, "UNI_1","GPA_1")
+        if gpa1:
+            return gpa1
+        gpa2 = extract_gpa(profile_data, "UNI_2","GPA_2")
+        if gpa2:
+            return gpa2
+        return None
+        
     #try and sort app_num_list by GPA
-    def extract_gpa(app_num):
+    def extract_gpa_for_sorted(app_num):
         profile_data = app_num_to_profile_data[app_num]
+        gpa = extract_gpa_from_multiple_fields(profile_data)
+        if gpa:
+            return gpa
+        # if didn't find any, try dreadful hack based on SGS gpa data
         inst = profile_data["DCS_UNION_INSTITUTION"]
         fields = inst.split('|')
         #dreadful hack to get around 3.85/4 business
@@ -221,14 +257,13 @@ if __name__ == '__main__':
         except:
             return 0.0
 
-    app_num_list = sorted(app_num_list,key=extract_gpa,reverse=True)
+    app_num_list = sorted(app_num_list,key=extract_gpa_for_sorted,reverse=True)
             
                 
     print("\n\n===============================\nAPPS matching: ",uni_filter_regexp)
     for app_num in app_num_list:
         profile_data = app_num_to_profile_data[app_num]
-        profile_data["DCS_UNION_INSTITUTION"]
-        print(app_num, profile_data["SGS_NUM"],profile_data["DCS_UNION_INSTITUTION"])
+        print(app_num, "%5.1f"%extract_gpa_for_sorted(app_num),profile_data["SGS_NUM"],profile_data["DCS_UNION_INSTITUTION"])
     print("===============================\n")
 
     try:
