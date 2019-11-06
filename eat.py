@@ -246,6 +246,9 @@ if __name__ == '__main__':
         transcript_fn =  fn(app_num,3)
         print(os.path.basename(sop_fn),os.path.basename(cv_fn),os.path.basename(transcript_fn))
         os.system(VIEWER  + " " + sop_fn + " " + cv_fn + " " + transcript_fn)
+        #in a different shell: echo "MAIB103GMIRPJGAX92E1RZT1Z65P900P" > /tmp/user_ref
+        print('user_ref=$(cat /tmp/user_ref) && open "https://confs.precisionconference.com/~mscac20/submissionProfile?paperNumber=100&userRef=$user_ref"')
+        #print('open "https://confs.precisionconference.com/~mscac20/submissionProfile?paperNumber=100&userRef=' + user_ref + '"') 
         resp = ""
         while True:
             print("choose dcs prefilter status for application",app_num,"from menu below")
