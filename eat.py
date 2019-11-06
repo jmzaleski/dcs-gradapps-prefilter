@@ -32,7 +32,7 @@ assert os.path.exists(VIEWER)
 COMPLETE_FILE = os.path.join(MASC_UNZIP_DIR,"public_html/admin/applicationStatus")
 assert os.path.exists(COMPLETE_FILE)
 
-VERBOSE = True
+VERBOSE = False
 
 #output file directory
 MASC_PREFILTER_DIR_NAME = "masc-prefilter"
