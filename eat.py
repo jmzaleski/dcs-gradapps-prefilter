@@ -219,12 +219,13 @@ if __name__ == '__main__':
             print("..eof..")
             return None
 
-    def write_to_new_file(fn,dict):
+    def write_to_new_file(header_line, fn,dict):
         """write all lines out to a new file name"""
         if os.path.exists(fn):
             os.system("mv %s %s" % (fn, "/tmp"))
         print("existing %s moved to /tmp" % fn)
         with open(fn,'w') as new_file:
+            print(header_line,file=new_file)
             for k in dict.keys():
                 line = k + "," + str(dict[k])
                 print(line)
@@ -260,7 +261,7 @@ if __name__ == '__main__':
     OFN_basename = "dcs-prefilter" + str(uuid.uuid4()) + ".csv"
     OFN = os.path.join(OFN_DIR,OFN_basename)
     assert not os.path.exists(OFN)
-    write_to_new_file(OFN,{}) #test write junk to OFN to make sure have perms and all that
+    write_to_new_file("testwrite",OFN,{}) #test write junk to OFN to make sure have perms and all that
     
     #########
     # main loop asking for decisions and writing them (paranoidly) away
@@ -299,7 +300,7 @@ if __name__ == '__main__':
             
                 ########## paranoidly, write every time
                 # megaparanoid would be to copy file each time to tmp
-                write_to_new_file(OFN, decisions) # 
+                write_to_new_file(uni_filter_regexp,OFN, decisions) # 
             #except:
             except Exception as e:
                 print(e)
