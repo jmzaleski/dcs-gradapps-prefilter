@@ -7,12 +7,15 @@ assert os.path.exists(HOME_DIR)
 TOOLS_DIR = os.path.join(HOME_DIR,"git/dcs-gradapps-prefilter/")
 assert os.path.exists(TOOLS_DIR)
 
+#root of unzipped archive of gradapps files
 MASC_UNZIP_DIR = os.path.join(HOME_DIR,"mscac/home/gradbackup/archive/mscac.2020/mscac20")
 assert os.path.exists(MASC_UNZIP_DIR)
-    
+
+#dir where transcripts, sop, cv live
 MASC_PAPERS_DIR = os.path.join(MASC_UNZIP_DIR,"public_html/papers/")
 assert os.path.exists(MASC_PAPERS_DIR)
 
+#shell script to fire up viewers on PDF files
 VIEWER = os.path.join(TOOLS_DIR,"view-files.sh")
 assert os.path.exists(VIEWER)
 
@@ -22,11 +25,11 @@ assert os.path.exists(COMPLETE_FILE)
 
 VERBOSE = False
 
+#obscure python way of deleting chars from unicode strings..
 translation_table_to_delete_chars = dict.fromkeys(map(ord, '!@#$;"'), None)
 
 def parse_profile_data_line(line):
-    "returns stuff to right of ="
-    VERBOSE = True
+    "returns stuff to right of = found in gradapps profile.data files"
     # EG: #set $sp364-value$ = "2014-09|2018-05|UNIV OF TORONTO|BSC H|2.88/4.0|||||||||||||||"; 
     if VERBOSE: print("rhs",line)
     try:
@@ -38,6 +41,7 @@ def parse_profile_data_line(line):
 
 
 def completed_dict_from_applicationStatus_file(fn):
+    "reads applicationStatus files and stashes away which apps are complete"
     with open(fn,"r") as apf:
         import re
         map = {}
@@ -52,6 +56,8 @@ def completed_dict_from_applicationStatus_file(fn):
     return map
 
 def dict_from_profile_data_file(fn):
+    "turn a profile.data file into a dictionary with only a few fields"
+    #TODO: this is ugly brute force. I'm sure there are fancy libs to do this pretty
     with open(fn,"r") as profile_data_file:
         import re
         rec = {}
@@ -69,6 +75,7 @@ def dict_from_profile_data_file(fn):
         return rec
 
 def parse_dir_path_for_app_number(path):
+    "we figure out the app number by cracking open the dir path to the profile.data file"
     try:
         l = path.split("public_html/data")
         d = l[1].split("/")
@@ -79,7 +86,8 @@ def parse_dir_path_for_app_number(path):
         exit(3)
     
 def build_dict_of_dicts(fn):
-    "read the listed profile.data files and turn the row in each into a dict"
+    """read the listed profile.data files and turn the row in each into a dict
+    the file name passed in fn was written by doing a find . -name profile.data"""
     profile_data_by_app_number = {}
     profile_data_by_sgs_number = {}
     try:
@@ -149,21 +157,27 @@ if __name__ == '__main__':
                 print("skip", app_num, "because CV does not exist")
             else:
                 app_num_list.append(app_num)
-            # if re.search("303",app_num):
-            #     print("hello")
-            #     print(">>"+app_num+"<<")
-            #     assert not "303" in completed_app_dict.keys()
-            #     if not app_num in completed_app_dict.keys():
-            #         print("there")
-            #         print(app_num_list)
-            #     exit(0)
 
+    #try and sort app_num_list by GPA
+    def extract_gpa(app_num):
+        profile_data = app_num_to_profile_data[app_num]
+        inst = profile_data["DCS_UNION_INSTITUTION"]
+        fields = inst.split('|')
+        #dreadful hack to get around 3.85/4 business
+        gpa_str = fields[4].split("/")[0] 
+        try:
+            return float(gpa_str)
+        except:
+            return 0.0
+
+    app_num_list = sorted(app_num_list,key=extract_gpa,reverse=True)
+            
                 
     print("\n\n===============================\nAPPS matching: ",uni_filter_regexp)
     for app_num in app_num_list:
         profile_data = app_num_to_profile_data[app_num]
         profile_data["DCS_UNION_INSTITUTION"]
-        print(profile_data["SGS_NUM"],profile_data["DCS_UNION_INSTITUTION"])
+        print(app_num, profile_data["SGS_NUM"],profile_data["DCS_UNION_INSTITUTION"])
     print("===============================\n")
 
     try:
@@ -201,17 +215,6 @@ if __name__ == '__main__':
                 print(line,file=new_file)
 
     from menu import PrefilterMenu
-    #response_list = ['L','S']
-    #response_menu_line_dict = {'L': "app loses, reject", 'S':"super app, examine immediately"}
-    from enum import Enum
-    class DCS_PREFILTER_DECISION(Enum):
-        PassStar  = "Pass-Star"
-        PassVGE   = "Pass-VGE"
-        PassG     = "Pass-G"
-        NCSReject = "NCS-Reject"
-        NCSPass   = "NCS-Pass"
-        Unsure    = "Unsure"
-        Reject    = "Reject"
 
     # what to display in menu
     menu_line_dict = { 's' : "Pass-Star:    Star applicant pass prefilter. maybe early admission",
@@ -236,7 +239,9 @@ if __name__ == '__main__':
                         }
     
     menu = PrefilterMenu(response_code_list, menu_line_dict ,"enter a letter followed by enter> ")
-    
+
+    OFN = "/tmp/prefiltered.csv"
+    #TODO: move existing OFN aside in safe way.
     decisions = {}
     for app_num in app_num_list:
         #concoct path of app_num "papers"
@@ -247,11 +252,12 @@ if __name__ == '__main__':
         print(os.path.basename(sop_fn),os.path.basename(cv_fn),os.path.basename(transcript_fn))
         os.system(VIEWER  + " " + sop_fn + " " + cv_fn + " " + transcript_fn)
         #in a different shell: echo "MAIB103GMIRPJGAX92E1RZT1Z65P900P" > /tmp/user_ref
-        print('user_ref=$(cat /tmp/user_ref) && open "https://confs.precisionconference.com/~mscac20/submissionProfile?paperNumber=100&userRef=$user_ref"')
-        #print('open "https://confs.precisionconference.com/~mscac20/submissionProfile?paperNumber=100&userRef=' + user_ref + '"') 
+        print('user_ref=$(cat /tmp/user_ref) && open "https://confs.precisionconference.com/~mscac20/submissionProfile?paperNumber=' + app_num +'&userRef=$user_ref"')
         resp = ""
         while True:
             print("choose dcs prefilter status for application",app_num,"from menu below")
+            print(app_num_to_profile_data[app_num]["DCS_UNION_INSTITUTION"])
+
             resp = menu.menu()
             if resp == None:
                 print("\n\nwonky reponse (interrupt key pressed?) from menu",resp)
@@ -267,7 +273,7 @@ if __name__ == '__main__':
                 #copy fn to backup
                 profile_data = app_num_to_profile_data[app_num]
                 decisions[profile_data["SGS_NUM"]] = gradapps_response
-                write_to_new_file("/tmp/out", decisions) # yeah, write every time
+                write_to_new_file(OFN, decisions) # yeah, write every time
             except:
                 print("something when wrong writing.. please try enter", resp,"again")
                 resp = ""
@@ -275,6 +281,8 @@ if __name__ == '__main__':
             break
         
     print(decisions)
+    print(OFN)
+    os.system("cat " + OFN)
             
         
         
