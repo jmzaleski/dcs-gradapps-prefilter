@@ -12,7 +12,8 @@ TOOLS_DIR = os.path.join(HOME_DIR,"git/dcs-gradapps-prefilter/")
 assert os.path.exists(TOOLS_DIR)
 
 #root of unzipped archive of gradapps files
-MASC_UNZIP_DIR = os.path.join(HOME_DIR,"mscac/home/gradbackup/archive/mscac.2020/mscac20")
+#MASC_UNZIP_DIR = os.path.join(HOME_DIR,"mscac/home/gradbackup/archive/mscac.2020/mscac20")
+MASC_UNZIP_DIR = os.path.join(HOME_DIR,"mscac")
 if not os.path.exists(MASC_UNZIP_DIR): die(MASC_UNZIP_DIR, "does not exist")
 
 #dir where transcripts, sop, cv live
@@ -31,7 +32,7 @@ assert os.path.exists(VIEWER)
 COMPLETE_FILE = os.path.join(MASC_UNZIP_DIR,"public_html/admin/applicationStatus")
 assert os.path.exists(COMPLETE_FILE)
 
-VERBOSE = False
+VERBOSE = True
 
 #output file directory
 MASC_PREFILTER_DIR_NAME = "masc-prefilter"
@@ -74,19 +75,20 @@ def completed_dict_from_applicationStatus_file(fn):
 def dict_from_profile_data_file(fn):
     "turn a profile.data file into a dictionary with only a few fields"
     #TODO: this is ugly brute force. I'm sure there are fancy libs to do this pretty
+    if VERBOSE: print(fn)
     with open(fn,"r") as profile_data_file:
         import re
         rec = {}
         for line in profile_data_file:
             if re.search("sp342-value",line):
-                #print("SGS#",line)
+                if VERBOSE: print("SGS#",line)
                 rec["SGS_NUM"] = parse_profile_data_line(line)
             elif re.search("sp364-value",line):
-                #print("union institution", line)
-                #print(parse_profile_data_line(line))
+                if VERBOSE: print("union institution", line)
+                if VERBOSE: print(parse_profile_data_line(line))
                 rec["DCS_UNION_INSTITUTION"] = parse_profile_data_line(line)
             elif re.search("sp363-value",line):
-                #print("status", line)
+                if VERBOSE: print("status", line)
                 rec["DCS_STATUS"] = parse_profile_data_line(line)
         return rec
 
@@ -115,7 +117,6 @@ def build_dict_of_dicts(fn_of_app_numbers):
     try:
          with open(fn_file_list, "r") as in_file:
              for l in in_file:
-                 #app_num = parse_dir_path_for_app_number(l)
                  app_num = l.strip()
                  d = dict_from_profile_data_file(concoct_profile_data_file_name_from_app_number(app_num))
                  profile_data_by_app_number[app_num] = d
@@ -182,8 +183,8 @@ if __name__ == '__main__':
     (app_num_to_profile_data,sgs_num_to_profile_data) = build_dict_of_dicts(fn_file_list)
 
     if VERBOSE:
-        print(app_num_to_profile_data)
-        print(sgs_num_to_profile_data)
+        print("app_num_to_profile_data",app_num_to_profile_data)
+        print("\n\n\nsgs_num_to_profile_data",sgs_num_to_profile_data)
         
     app_num_list = []
     for app_num in app_num_to_profile_data.keys():
