@@ -446,7 +446,7 @@ if __name__ == '__main__':
     print("\n=========================\n...and execute following commands:\n")
     dest = "%s:%s/" % (CSLAB_USERID, MASC_PREFILTER_DIR_NAME)
     rsync_cmd = "rsync  %s %s" %  (OFN, dest)
-    curl_cmd =  'curl -F appsFile="%s" "%s"' % (
+    curl_cmd =  'curl -F appsFile=@"%s" "%s"' % (
         OFN_basename,
         'https://confs.precisionconference.com/~mscac20/uploadApps?config=prefilter&pass=StayorGo'
         )
