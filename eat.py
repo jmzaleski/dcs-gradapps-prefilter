@@ -12,31 +12,30 @@ TOOLS_DIR = os.path.join(HOME_DIR,"git/dcs-gradapps-prefilter/")
 assert os.path.exists(TOOLS_DIR)
 
 #root of unzipped archive of gradapps files
-#MASC_UNZIP_DIR = os.path.join(HOME_DIR,"mscac/home/gradbackup/archive/mscac.2020/mscac20")
-MASC_UNZIP_DIR = os.path.join(HOME_DIR,"mscac")
-if not os.path.exists(MASC_UNZIP_DIR): die(MASC_UNZIP_DIR, "does not exist")
+MSCAC_UNZIP_DIR = os.path.join(HOME_DIR,"mscac")
+if not os.path.exists(MSCAC_UNZIP_DIR): die(MSCAC_UNZIP_DIR, "does not exist")
 
 #dir where transcripts, sop, cv live
-MASC_PAPERS_DIR = os.path.join(MASC_UNZIP_DIR,"public_html","papers")
-assert os.path.exists(MASC_PAPERS_DIR)
+MSCAC_PAPERS_DIR = os.path.join(MSCAC_UNZIP_DIR,"public_html","papers")
+assert os.path.exists(MSCAC_PAPERS_DIR)
 
 #dir where application dirs containing profile.data live
-MASC_PROFILE_DATA_ROOT_DIR = os.path.join(MASC_UNZIP_DIR,"public_html","data")
-assert os.path.exists(MASC_PROFILE_DATA_ROOT_DIR)
+MSCAC_PROFILE_DATA_ROOT_DIR = os.path.join(MSCAC_UNZIP_DIR,"public_html","data")
+assert os.path.exists(MSCAC_PROFILE_DATA_ROOT_DIR)
 
 #shell script to fire up viewers on PDF files
 VIEWER = os.path.join(TOOLS_DIR,"view-files.sh")
 assert os.path.exists(VIEWER)
 
 #file listing which apps are complete
-COMPLETE_FILE = os.path.join(MASC_UNZIP_DIR,"public_html/admin/applicationStatus")
+COMPLETE_FILE = os.path.join(MSCAC_UNZIP_DIR,"public_html/admin/applicationStatus")
 assert os.path.exists(COMPLETE_FILE)
 
 VERBOSE = False
 
 #output file directory
-MASC_PREFILTER_DIR_NAME = "masc-prefilter"
-OFN_DIR=os.path.join(HOME_DIR,MASC_PREFILTER_DIR_NAME)
+MSCAC_PREFILTER_DIR_NAME = "mscac-prefilter"
+OFN_DIR=os.path.join(HOME_DIR,MSCAC_PREFILTER_DIR_NAME)
 if not os.path.exists(OFN_DIR): die("OFN_DIR", OFN_DIR, "does not exist")
 
 # where to rsync output file for gradapps
@@ -116,7 +115,7 @@ def parse_dir_path_for_app_number(path):
 def concoct_profile_data_file_name_from_app_number(app_num):
     """concoct full path of profile.data file from app_num.
        Depends on inside knowledge of how gradapps stores its stuff"""
-    profile_data_fn = os.path.join(MASC_PROFILE_DATA_ROOT_DIR,app_num,"profile.data")
+    profile_data_fn = os.path.join(MSCAC_PROFILE_DATA_ROOT_DIR,app_num,"profile.data")
     assert os.path.exists(profile_data_fn)
     return profile_data_fn
 
@@ -171,7 +170,7 @@ def parse_positional_args():
 
 def fn(n,nn):
     "concoct full path to transcript, cv, sop files in papers dir"
-    return os.path.join(MASC_PAPERS_DIR, str(n), "file" + n + "-" + str(nn) + ".pdf")
+    return os.path.join(MSCAC_PAPERS_DIR, str(n), "file" + n + "-" + str(nn) + ".pdf")
 
 if __name__ == '__main__': 
     import sys
@@ -444,7 +443,7 @@ if __name__ == '__main__':
     1. copy to file on apps1 
     2. curl to gradapps server""")
     print("\n=========================\n...and execute following commands:\n")
-    dest = "%s:%s/" % (CSLAB_USERID, MASC_PREFILTER_DIR_NAME)
+    dest = "%s:%s/" % (CSLAB_USERID, MSCAC_PREFILTER_DIR_NAME)
     rsync_cmd = "rsync  %s %s" %  (OFN, dest)
     curl_cmd =  'curl -F appsFile="@%s" "%s"' % (
         OFN_basename,
@@ -459,7 +458,7 @@ if __name__ == '__main__':
     os.system(rsync_cmd)
 
     print("now check file arrived by remote ls -ltr of dest dir")
-    os.system("ssh %s ls -ltr %s" % (CSLAB_USERID, MASC_PREFILTER_DIR_NAME))
+    os.system("ssh %s ls -ltr %s" % (CSLAB_USERID, MSCAC_PREFILTER_DIR_NAME))
     print("\nlast file of above ls -ltr should have be:   ", OFN_basename)
 
     print("\nnow ssh to", CSLAB_USERID, "and curl file to gradapps\n")
