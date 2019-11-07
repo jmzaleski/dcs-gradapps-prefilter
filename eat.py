@@ -296,12 +296,19 @@ if __name__ == '__main__':
         profile_data = app_num_to_profile_data[app_num]
         return extract_gpa_for_sorted(profile_data)
 
-    def pretty_print_app_list(app_num_to_profile_data_dict,num_list):
+    def pretty_print_app_list(app_num_to_profile_data_dict,num_list,after_map):
+        "print the list of applicants to filter, or just after filtering"
+        # TODO: cleanup disgusting after_map BS (reuse this code in heat of battle)
         print("\n\n===============================\nAPPS matching: ",uni_filter_regexp)
         for app_num in num_list:
+                
             profile_data = app_num_to_profile_data_dict[app_num]
+            if after_map:
+                prefilter_status = after_map[profile_data["SGS_NUM"]]
+            else:
+                prefilter_status = extract_prefilter_status(profile_data)
             print(app_num,
-                      "%11s"   % extract_prefilter_status(profile_data),
+                      "%11s"   % prefilter_status,
                       "%5.1f" % extract_gpa_for_sorted(profile_data),
                       profile_data["SGS_NUM"],
                       profile_data["DCS_UNION_INSTITUTION"].rstrip('|')
@@ -309,7 +316,7 @@ if __name__ == '__main__':
         print("===============================\n")
         
     app_num_list = sorted(app_num_list,key=gawk,reverse=True)
-    pretty_print_app_list(app_num_to_profile_data,app_num_list)
+    pretty_print_app_list(app_num_to_profile_data,app_num_list,None)
 
     try:
         response = input("prefilter above " + str(len(app_num_list)) + " applications? matching " +
@@ -431,7 +438,7 @@ if __name__ == '__main__':
                 continue
             break
 
-    pretty_print_app_list(app_num_to_profile_data,app_num_list)
+    pretty_print_app_list(app_num_to_profile_data,app_num_list,decisions)
 
     #########
     # rest of script largely BS for convenience putting the output somewhere useful
