@@ -220,7 +220,6 @@ if __name__ == '__main__':
                 print("skip", app_num, "because CV does not exist")
             else:
                 app_num_list.append(app_num)
-    print(app_num_list)
 
 
     def extract_gpa(profile_data, u_field_name,gpa_field_name):
@@ -291,21 +290,21 @@ if __name__ == '__main__':
     def gawk(app_num):
         profile_data = app_num_to_profile_data[app_num]
         return extract_gpa_for_sorted(profile_data)
-    
-    #app_num_list = sorted(app_num_list,key=extract_gpa_for_sorted,reverse=True)
+
+    def pretty_print_app_list(app_num_to_profile_data_dict,num_list):
+        print("\n\n===============================\nAPPS matching: ",uni_filter_regexp)
+        for app_num in num_list:
+            profile_data = app_num_to_profile_data_dict[app_num]
+            print(app_num,
+                      "%11s"   % extract_prefilter_status(profile_data),
+                      "%5.1f" % extract_gpa_for_sorted(profile_data),
+                      profile_data["SGS_NUM"],
+                      profile_data["DCS_UNION_INSTITUTION"].rstrip('|')
+                      )
+        print("===============================\n")
+        
     app_num_list = sorted(app_num_list,key=gawk,reverse=True)
-            
-                
-    print("\n\n===============================\nAPPS matching: ",uni_filter_regexp)
-    for app_num in app_num_list:
-        profile_data = app_num_to_profile_data[app_num]
-        print(app_num,
-                  "%11s"   % extract_prefilter_status(profile_data),
-                  "%5.1f" % extract_gpa_for_sorted(profile_data),
-                  profile_data["SGS_NUM"],
-                  profile_data["DCS_UNION_INSTITUTION"]
-                  )
-    print("===============================\n")
+    pretty_print_app_list(app_num_to_profile_data,app_num_list)
 
     try:
         response = input("prefilter above " + str(len(app_num_list)) + " applications? matching " +
@@ -426,6 +425,8 @@ if __name__ == '__main__':
                 resp = ""
                 continue
             break
+
+    pretty_print_app_list(app_num_to_profile_data,app_num_list)
 
     #########
     # rest of script largely BS for convenience putting the output somewhere useful
