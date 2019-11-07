@@ -282,7 +282,7 @@ if __name__ == '__main__':
         elif ix_pfs == 5:
             return "NCS-Pass"
         elif ix_pfs == 6:
-            return "Pass-Good"
+            return "Pass-Unsure"
         elif ix_pfs == 7:
             return "Pass-Good"   ###### hey what gives??
         else:
