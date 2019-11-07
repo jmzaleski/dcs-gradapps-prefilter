@@ -184,12 +184,18 @@ if __name__ == '__main__':
 
     completed_app_dict = completed_dict_from_applicationStatus_file(COMPLETE_FILE)
 
+    #out of control parm parsing. can do - or -123 or -"123 456"
     if fn_app_num_list.startswith('-'):
         if len(fn_app_num_list)>1:
-            app_num = fn_app_num_list[1:]
+            fields = fn_app_num_list[1:].split(" ")
+            if len(fields) == 1:
+                app_num = fn_app_num_list[1:]
+                app_num_list = [ app_num]
+            else:
+                app_num_list = fields
         else:
             app_num = input("enter app_number to filter > ")
-        app_num_list = [ app_num]
+            app_num_list = [ app_num]
     else:
         app_num_list = list_of_app_numbers(fn_app_num_list)
         
