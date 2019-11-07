@@ -376,7 +376,7 @@ if __name__ == '__main__':
     menu = PrefilterMenu(response_code_list, menu_line_dict ,"enter a letter followed by enter> ")
 
     import uuid #universal unique resource naming thingy
-    OFN_basename = "dcs-prefilter" + str(uuid.uuid4()) + ".csv"
+    OFN_basename = "dcs-prefilter-" + str(uuid.uuid4()) + ".csv"
     OFN = os.path.join(OFN_DIR,OFN_basename)
     assert not os.path.exists(OFN)
     write_to_new_file("testwrite",OFN,{}) #test write junk to OFN to make sure have perms and all that
