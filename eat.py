@@ -131,11 +131,11 @@ def build_dict_of_dicts(list_of_app_numbers):
         #print(profile_data_by_sgs_number)
     return (profile_data_by_app_number, profile_data_by_sgs_number)
 
-def build_dict_of_dicts_fn_of_file_numbers(fn_of_app_numbers):
+def list_of_app_numbers(fn_of_app_numbers):
     """read the listed app_num's, concoct the path to the profile.data file and turn the data there into a dict"""
     list_of_app_numbers  = []
     try:
-         with open(fn_file_list, "r") as in_file:
+         with open(fn_of_app_numbers, "r") as in_file:
              for l in in_file:
                  app_num = l.strip()
                  list_of_app_numbers.append(app_num)
@@ -145,35 +145,22 @@ def build_dict_of_dicts_fn_of_file_numbers(fn_of_app_numbers):
          traceback.print_exc(file=sys.stdout)
          exit(3)
          return None
-    return build_dict_of_dicts(list_of_app_numbers)
+    return list_of_app_numbers
 
-def build_dict_of_dicts_filenames(fn):
-    """read the listed profile.data files and turn the row in each into a dict
-    the file name passed in fn was written by doing a find . -name profile.data"""
-    profile_data_by_app_number = {}
-    profile_data_by_sgs_number = {}
-    try:
-         with open(fn_file_list, "r") as in_file:
-             for l in in_file:
-                 d = dict_from_profile_data_file(l.strip())
-                 app_num = parse_dir_path_for_app_number(l)
-                 profile_data_by_app_number[app_num] = d
-                 profile_data_by_sgs_number[d["SGS_NUM"]] = d
-         #print(profile_data_by_sgs_number)
-    except:
-         print(fn_file_list, "failed to open for read? really? bail!")
-         import traceback
-         traceback.print_exc(file=sys.stdout)
-         exit(3)
-         return None
-    return (profile_data_by_app_number, profile_data_by_sgs_number)
+def build_dict_of_dicts_fn_of_file_numbers(fn_of_app_numbers):
+    """read the listed app_num's, concoct the path to the profile.data file and turn the data there into a dict"""
+    return build_dict_of_dicts(list_of_app_numbers(fn_of_app_numbers))
     
 def parse_positional_args():
     "parse the command line parameters of this program"
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "fn_of_list_of_app_nums", help="likely fn containing find . -name profile.data| sed See find-profile-data-app-numbers.sh"
+        "fn_of_list_of_app_nums",
+        help="""likely fn containing find . -name profile.data | sed for numbers.
+        See find-profile-data-app-numbers.sh
+        Note if fn given is -NNN it means app_number NNN, if just - prompts for number        
+        """
         )
     parser.add_argument(
         "uni_filter_regexp", help="university to filter by"
@@ -193,11 +180,20 @@ if __name__ == '__main__':
     #duplicate. sorta. so works on mac and windows laptops
     for dir in [TOOLS_DIR]:
         sys.path.append(dir)
-    (fn_file_list,uni_filter_regexp) = parse_positional_args()
+    (fn_app_num_list,uni_filter_regexp) = parse_positional_args()
 
     completed_app_dict = completed_dict_from_applicationStatus_file(COMPLETE_FILE)
-    
-    (app_num_to_profile_data,sgs_num_to_profile_data) = build_dict_of_dicts_fn_of_file_numbers(fn_file_list)
+
+    if fn_app_num_list.startswith('-'):
+        if len(fn_app_num_list)>1:
+            app_num = fn_app_num_list[1:]
+        else:
+            app_num = input("enter app_number to filter > ")
+        app_num_list = [ app_num]
+    else:
+        app_num_list = list_of_app_numbers(fn_app_num_list)
+        
+    (app_num_to_profile_data,sgs_num_to_profile_data) = build_dict_of_dicts(app_num_list)
 
     if VERBOSE:
         print("app_num_to_profile_data",app_num_to_profile_data)
