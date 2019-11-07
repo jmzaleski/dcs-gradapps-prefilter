@@ -7,7 +7,7 @@
 CMD="rsync -av gradbackup@gradapps.cs.toronto.edu:archive/mscac.2020/mscac20/public_html ."
 
 echo you will exec: $CMD
-read -p "hit enter to rsync gradapps backup to ." JUNK
+read -p "hit enter to rsync gradapps backup to . > " JUNK
 set -x
 $CMD
 

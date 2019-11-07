@@ -98,6 +98,8 @@ def dict_from_profile_data_file(fn):
                 rec["UNI_2"] = parse_profile_data_line(line)
             elif re.search("sp92-value",line):
                 rec["GPA_2"] = parse_profile_data_line(line)
+            elif re.search("sp418-value",line):
+                rec["PREFILTER_STATUS"] = parse_profile_data_line(line)
         return rec
 
 def parse_dir_path_for_app_number(path):
@@ -118,25 +120,32 @@ def concoct_profile_data_file_name_from_app_number(app_num):
     assert os.path.exists(profile_data_fn)
     return profile_data_fn
 
-def build_dict_of_dicts(fn_of_app_numbers):
+def build_dict_of_dicts(list_of_app_numbers):
     """read the listed app_num's, concoct the path to the profile.data file and turn the data there into a dict"""
     profile_data_by_app_number = {}
     profile_data_by_sgs_number = {}
+    for app_num in list_of_app_numbers:
+        d = dict_from_profile_data_file(concoct_profile_data_file_name_from_app_number(app_num))
+        profile_data_by_app_number[app_num] = d
+        profile_data_by_sgs_number[d["SGS_NUM"]] = d
+        #print(profile_data_by_sgs_number)
+    return (profile_data_by_app_number, profile_data_by_sgs_number)
+
+def build_dict_of_dicts_fn_of_file_numbers(fn_of_app_numbers):
+    """read the listed app_num's, concoct the path to the profile.data file and turn the data there into a dict"""
+    list_of_app_numbers  = []
     try:
          with open(fn_file_list, "r") as in_file:
              for l in in_file:
                  app_num = l.strip()
-                 d = dict_from_profile_data_file(concoct_profile_data_file_name_from_app_number(app_num))
-                 profile_data_by_app_number[app_num] = d
-                 profile_data_by_sgs_number[d["SGS_NUM"]] = d
-         #print(profile_data_by_sgs_number)
+                 list_of_app_numbers.append(app_num)
     except:
          print(fn_file_list, "failed to open for read? really? bail!")
          import traceback
          traceback.print_exc(file=sys.stdout)
          exit(3)
          return None
-    return (profile_data_by_app_number, profile_data_by_sgs_number)
+    return build_dict_of_dicts(list_of_app_numbers)
 
 def build_dict_of_dicts_filenames(fn):
     """read the listed profile.data files and turn the row in each into a dict
@@ -188,7 +197,7 @@ if __name__ == '__main__':
 
     completed_app_dict = completed_dict_from_applicationStatus_file(COMPLETE_FILE)
     
-    (app_num_to_profile_data,sgs_num_to_profile_data) = build_dict_of_dicts(fn_file_list)
+    (app_num_to_profile_data,sgs_num_to_profile_data) = build_dict_of_dicts_fn_of_file_numbers(fn_file_list)
 
     if VERBOSE:
         print("app_num_to_profile_data",app_num_to_profile_data)
@@ -242,8 +251,7 @@ if __name__ == '__main__':
         return None
         
     #try and sort app_num_list by GPA
-    def extract_gpa_for_sorted(app_num):
-        profile_data = app_num_to_profile_data[app_num]
+    def extract_gpa_for_sorted(profile_data):
         gpa = extract_gpa_from_multiple_fields(profile_data)
         if gpa:
             return gpa
@@ -257,23 +265,60 @@ if __name__ == '__main__':
         except:
             return 0.0
 
-    app_num_list = sorted(app_num_list,key=extract_gpa_for_sorted,reverse=True)
+    def extract_prefilter_status(profile_data):
+        pfs = profile_data["PREFILTER_STATUS"]
+        #print("pfs:>>" + pfs + "<<")
+        #looks like starts out unset
+        if pfs == None or len(pfs) == 0:
+            return "-"
+        try:
+            ix_pfs = int(pfs)
+        except:
+            return "undef" #not an int? gawd busted?
+        if ix_pfs == 1:
+            return "Reject"
+        elif ix_pfs == 2:
+            return "Pass-Star"
+        elif ix_pfs == 3:
+            return "Pass-VGE"
+        elif ix_pfs == 4:
+            return "NCS-Reject"
+        elif ix_pfs == 5:
+            return "NCS-Pass"
+        elif ix_pfs == 6:
+            return "Pass-Good"
+        elif ix_pfs == 7:
+            return "Pass-Good"   ###### hey what gives??
+        else:
+            return pfs
+
+    def gawk(app_num):
+        profile_data = app_num_to_profile_data[app_num]
+        return extract_gpa_for_sorted(profile_data)
+    
+    #app_num_list = sorted(app_num_list,key=extract_gpa_for_sorted,reverse=True)
+    app_num_list = sorted(app_num_list,key=gawk,reverse=True)
             
                 
     print("\n\n===============================\nAPPS matching: ",uni_filter_regexp)
     for app_num in app_num_list:
         profile_data = app_num_to_profile_data[app_num]
-        print(app_num, "%5.1f"%extract_gpa_for_sorted(app_num),profile_data["SGS_NUM"],profile_data["DCS_UNION_INSTITUTION"])
+        print(app_num,
+                  "%11s"   % extract_prefilter_status(profile_data),
+                  "%5.1f" % extract_gpa_for_sorted(profile_data),
+                  profile_data["SGS_NUM"],
+                  profile_data["DCS_UNION_INSTITUTION"]
+                  )
     print("===============================\n")
 
     try:
         response = input("prefilter above " + str(len(app_num_list)) + " applications? matching " +
-                         uni_filter_regexp + " (enter any char to BAIL OUT)> ")
+                         uni_filter_regexp + " (enter q to BAIL OUT)> ")
     except:
         response = None
         
     if response == None or (len(response) > 0 and not response.lower().startswith("y")):
-        print("entering something bails out.. just enter to continue")
+        print("actually entering any char bails out.. hitting enter alonw continues.. :)")
         exit(0)
 
     def read_query_from_input(prompt):
@@ -354,6 +399,7 @@ if __name__ == '__main__':
         while True:
             print("choose dcs prefilter status for application",app_num,"from menu below")
             print(app_num_to_profile_data[app_num]["DCS_UNION_INSTITUTION"])
+            print("prefilter", extract_prefilter_status(app_num_to_profile_data[app_num]))#["PREFILTER_STATUS"])
             
             ########## menu for actual decision 
             resp = menu.menu()
