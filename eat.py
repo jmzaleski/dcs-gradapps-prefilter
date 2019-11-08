@@ -305,7 +305,11 @@ if __name__ == '__main__':
                 
             profile_data = app_num_to_profile_data_dict[app_num]
             if after_map:
-                prefilter_status = after_map[profile_data["SGS_NUM"]]
+                sgs_num = profile_data["SGS_NUM"]
+                if sgs_num in after_map:
+                    prefilter_status = after_map[profile_data["SGS_NUM"]]
+                else:
+                    prefilter_status = "Skip" #skipped making decision, so nothing in map
             else:
                 prefilter_status = extract_prefilter_status(profile_data)
             print(app_num,
@@ -417,7 +421,7 @@ if __name__ == '__main__':
             
             if resp.startswith('S'):
                 print("okay, skipping", app_num)
-                continue
+                break ######### SORRY.. goes to next application (or once did) TODO: fix break
             
             gradapps_response = gradapps_response_map[resp]
             #print("resp:", resp, gradapps_response)
@@ -458,8 +462,8 @@ if __name__ == '__main__':
     print("\n=========================\n...and execute following commands:\n")
     dest = "%s:%s/" % (CSLAB_USERID, MSCAC_PREFILTER_DIR_NAME)
     rsync_cmd = "rsync  %s %s" %  (OFN, dest)
+    
     URL='https://confs.precisionconference.com/~mscac20/uploadApps?config=prefilter&pass=StayorGo'
-
     curl_cmd =  'curl -F appsFile="@mscac-prefilter/%s" "%s"' % ( OFN_basename, URL )
 
     # probably will need ssh config support or will prompt for password
@@ -470,12 +474,16 @@ if __name__ == '__main__':
     if not resp.startswith('s'):
         os.system(rsync_cmd)
 
-    print("now check file arrived by remote ls -ltr of dest dir")
+    print("check that rsync'd file made it..")
     os.system("ssh %s ls -ltr %s" % (CSLAB_USERID, MSCAC_PREFILTER_DIR_NAME))
-    print("\nlast file of above ls -ltr should have be:   ", OFN_basename)
 
-    print("\nnow ssh to", CSLAB_USERID, "and curl file to gradapps\n")
-    print(curl_cmd)
-    print("or do it from workstation..") #make really fancy cat file | ssh command
-    print("ssh qew", "'" + curl_cmd + "'") #gross quoting, sorry
-    print('\nnncat ~/mscac-prefilter/%s | ssh qew curl -F "%s"' % (OFN_basename,URL))
+    print("\nnow ssh to", CSLAB_USERID, "and curl file to gradapps\n\n")
+    ssh_cmd = "ssh -tt %s '%s'" % (CSLAB_USERID, curl_cmd )
+    print(ssh_cmd)
+    resp = input("hit enter to curl the prefilter choices to gradapps server.. > ")
+    os.system(ssh_cmd)
+
+    # something missing i think it must be the form id. fiddle more later
+    # print("..or probably better if you are on a unix machine..")
+    # # ssh -tt forces allocation of "pseudo terminal" so that curl's nattering makes it back
+    # print('\n\ncat ~/mscac-prefilter/%s | ssh -tt qew curl -F - "%s"' % (OFN_basename,URL))
