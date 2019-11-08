@@ -275,6 +275,7 @@ if __name__ == '__main__':
             ix_pfs = int(pfs)
         except:
             return "undef" #not an int? gawd busted?
+        #TODO: DRY this up wrt gradapps_response_map 
         if ix_pfs == 1:
             return "Reject"
         elif ix_pfs == 2:
@@ -365,10 +366,11 @@ if __name__ == '__main__':
                            'u' : "Unsure:       whether this applicant should pass prefilter",
                            'r' : "Reject:       Reject application. fails prefilter",
                            'x' : "NCS-Reject:   not enough CS. Fails prefilter",
-                           'y' : "NCS-Pass:     not enough CS but stellar enough to pass prefilter"
+                           'y' : "NCS-Pass:     not enough CS but stellar enough to pass prefilter",
+                           'S' : "SKIP setting Prefilter_Status"
                         }
     #order to display menu items in 
-    response_code_list = ['r', 's','v','g','u','x','y']
+    response_code_list = ['r', 's','v','g','u','x','y','S']
 
     #map responses to gradapps prefilter status column values
     gradapps_response_map = { 's' : "Pass-Star",
@@ -404,15 +406,19 @@ if __name__ == '__main__':
         print('user_ref=$(cat /tmp/user_ref) && open "https://confs.precisionconference.com/~mscac20/submissionProfile?paperNumber=' + app_num +'&userRef=$user_ref"')
         resp = ""
         while True:
-            print("choose dcs prefilter status for application",app_num,"from menu below")
+            print("choose dcs prefilter status for application >>>",app_num,"<<< from menu below")
             print(app_num_to_profile_data[app_num]["DCS_UNION_INSTITUTION"])
-            print("prefilter", extract_prefilter_status(app_num_to_profile_data[app_num]))#["PREFILTER_STATUS"])
             
             ########## menu for actual decision 
             resp = menu.menu()
             if resp == None:
                 print("\n\nwonky reponse (interrupt key pressed?) from menu",resp)
                 continue
+            
+            if resp.startswith('S'):
+                print("okay, skipping", app_num)
+                continue
+            
             gradapps_response = gradapps_response_map[resp]
             #print("resp:", resp, gradapps_response)
 
@@ -452,17 +458,17 @@ if __name__ == '__main__':
     print("\n=========================\n...and execute following commands:\n")
     dest = "%s:%s/" % (CSLAB_USERID, MSCAC_PREFILTER_DIR_NAME)
     rsync_cmd = "rsync  %s %s" %  (OFN, dest)
-    curl_cmd =  'curl -F appsFile="@%s" "%s"' % (
-        OFN_basename,
-        'https://confs.precisionconference.com/~mscac20/uploadApps?config=prefilter&pass=StayorGo'
-        )
+    URL='https://confs.precisionconference.com/~mscac20/uploadApps?config=prefilter&pass=StayorGo'
+
+    curl_cmd =  'curl -F appsFile="@mscac-prefilter/%s" "%s"' % ( OFN_basename, URL )
 
     # probably will need ssh config support or will prompt for password
     print(rsync_cmd)
-    print(curl_cmd)
+    print("ssh qew", "'" + curl_cmd + "'") #gross quoting, sorry
     print("\n=========================\n")
     resp = input("hit Enter to exec rsync above (control-c only way to skip rsync) > ")
-    os.system(rsync_cmd)
+    if not resp.startswith('s'):
+        os.system(rsync_cmd)
 
     print("now check file arrived by remote ls -ltr of dest dir")
     os.system("ssh %s ls -ltr %s" % (CSLAB_USERID, MSCAC_PREFILTER_DIR_NAME))
@@ -470,4 +476,6 @@ if __name__ == '__main__':
 
     print("\nnow ssh to", CSLAB_USERID, "and curl file to gradapps\n")
     print(curl_cmd)
-    
+    print("or do it from workstation..") #make really fancy cat file | ssh command
+    print("ssh qew", "'" + curl_cmd + "'") #gross quoting, sorry
+    print('\nnncat ~/mscac-prefilter/%s | ssh qew curl -F "%s"' % (OFN_basename,URL))
