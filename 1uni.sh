@@ -2,9 +2,17 @@
 
 TOOLS=~/git/dcs-gradapps-prefilter/
 
-read -p "pre-filter by SCHOOL? (enter filter string eg TORONTO and hit enter to continue) > " SCHOOL
-echo will run:
+if test ! -z "$1"
+then
+	SCHOOL="$1"
+	read -p "hit enter to filter by $SCHOOL >" junk
+else
+	read -p "pre-filter by SCHOOL? (enter filter string eg TORONTO and hit enter to continue) > " SCHOOL
+fi
+
+echo running prefilter helper filtered by $SCHOOL ...
+
 echo python3 $TOOLS/eat.py app_numbers $SCHOOL
 
 set -x
-python3 $TOOLS/eat.py app_numbers $SCHOOL
+python3 $TOOLS/eat.py app_numbers "$SCHOOL"
