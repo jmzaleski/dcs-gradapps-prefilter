@@ -44,7 +44,7 @@ CSLAB_USERID = 'matz@apps1.cs.toronto.edu'
 #obscure python way of deleting chars from unicode strings..
 translation_table_to_delete_chars = dict.fromkeys(map(ord, '!@#$;"'), None)
 
-def parse_profile_data_line(line):
+def parse_rhs_profile_data_line(line):
     "returns stuff to right of = found in gradapps profile.data files"
     # EG: #set $sp364-value$ = "2014-09|2018-05|UNIV OF TORONTO|BSC H|2.88/4.0|||||||||||||||"; 
     if VERBOSE: print("rhs",line)
@@ -71,6 +71,17 @@ def completed_dict_from_applicationStatus_file(fn):
                 map[fields[0]] = False
     return map
 
+from enum import IntEnum
+class GradAppsField(IntEnum):
+    UNI_1   = 29
+    GPA_1   = 35
+    UNI_2   = 87
+    GPA_2   = 92
+    SGS_NUM = 342
+    DCS_STATUS  = 363
+    DCS_UNION_INSTITUTION = 364
+    PREFILTER_STATUS = 418
+
 def dict_from_profile_data_file(fn):
     "turn a profile.data file into a dictionary with only a few fields"
     #TODO: this is ugly brute force. I'm sure there are fancy libs to do this pretty
@@ -81,24 +92,54 @@ def dict_from_profile_data_file(fn):
         for line in profile_data_file:
             if re.search("sp342-value",line):
                 if VERBOSE: print("SGS#",line)
-                rec["SGS_NUM"] = parse_profile_data_line(line)
+                rec["SGS_NUM"] = parse_rhs_profile_data_line(line)
             elif re.search("sp364-value",line):
                 if VERBOSE: print("union institution", line)
-                if VERBOSE: print(parse_profile_data_line(line))
-                rec["DCS_UNION_INSTITUTION"] = parse_profile_data_line(line)
+                if VERBOSE: print(parse_rhs_profile_data_line(line))
+                rec["DCS_UNION_INSTITUTION"] = parse_rhs_profile_data_line(line)
             elif re.search("sp363-value",line):
                 if VERBOSE: print("status", line)
-                rec["DCS_STATUS"] = parse_profile_data_line(line)
+                rec["DCS_STATUS"] = parse_rhs_profile_data_line(line)
             elif re.search("sp29-value",line):
-                rec["UNI_1"] = parse_profile_data_line(line)
+                rec["UNI_1"] = parse_rhs_profile_data_line(line)
             elif re.search("sp35-value",line):
-                rec["GPA_1"] = parse_profile_data_line(line)
+                rec["GPA_1"] = parse_rhs_profile_data_line(line)
             elif re.search("sp87-value",line):
-                rec["UNI_2"] = parse_profile_data_line(line)
+                rec["UNI_2"] = parse_rhs_profile_data_line(line)
             elif re.search("sp92-value",line):
-                rec["GPA_2"] = parse_profile_data_line(line)
+                rec["GPA_2"] = parse_rhs_profile_data_line(line)
             elif re.search("sp418-value",line):
-                rec["PREFILTER_STATUS"] = parse_profile_data_line(line)
+                rec["PREFILTER_STATUS"] = parse_rhs_profile_data_line(line)
+        return rec
+    
+def dict_from_profile_data_file_old(fn):
+    "turn a profile.data file into a dictionary with only a few fields"
+    #TODO: this is ugly brute force. I'm sure there are fancy libs to do this pretty
+    if VERBOSE: print(fn)
+    with open(fn,"r") as profile_data_file:
+        import re
+        rec = {}
+        for line in profile_data_file:
+            if re.search("sp342-value",line):
+                if VERBOSE: print("SGS#",line)
+                rec["SGS_NUM"] = parse_rhs_profile_data_line(line)
+            elif re.search("sp364-value",line):
+                if VERBOSE: print("union institution", line)
+                if VERBOSE: print(parse_rhs_profile_data_line(line))
+                rec["DCS_UNION_INSTITUTION"] = parse_rhs_profile_data_line(line)
+            elif re.search("sp363-value",line):
+                if VERBOSE: print("status", line)
+                rec["DCS_STATUS"] = parse_rhs_profile_data_line(line)
+            elif re.search("sp29-value",line):
+                rec["UNI_1"] = parse_rhs_profile_data_line(line)
+            elif re.search("sp35-value",line):
+                rec["GPA_1"] = parse_rhs_profile_data_line(line)
+            elif re.search("sp87-value",line):
+                rec["UNI_2"] = parse_rhs_profile_data_line(line)
+            elif re.search("sp92-value",line):
+                rec["GPA_2"] = parse_rhs_profile_data_line(line)
+            elif re.search("sp418-value",line):
+                rec["PREFILTER_STATUS"] = parse_rhs_profile_data_line(line)
         return rec
 
 def parse_dir_path_for_app_number(path):
