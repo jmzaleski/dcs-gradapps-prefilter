@@ -184,6 +184,7 @@ if __name__ == '__main__':
 
     #out of control parm parsing. can do - or -123 or -"123 456"
     if fn_app_num_list.startswith('-'):
+        #TODO: this should also arrange to sort by this list
         if len(fn_app_num_list)>1:
             fields = fn_app_num_list[1:].split(" ")
             if len(fields) == 1:
@@ -202,7 +203,8 @@ if __name__ == '__main__':
     if VERBOSE:
         print("app_num_to_profile_data",app_num_to_profile_data)
         print("\n\n\nsgs_num_to_profile_data",sgs_num_to_profile_data)
-        
+
+    #TODO this re-sorts by GPA. bug? maybe should leave sort by app_num_list as above
     app_num_list = []
     for app_num in app_num_to_profile_data.keys():
         profile_data = app_num_to_profile_data[app_num]
@@ -225,12 +227,12 @@ if __name__ == '__main__':
             else:
                 app_num_list.append(app_num)
 
-
     def extract_gpa(profile_data, u_field_name,gpa_field_name):
         if not u_field_name in profile_data.keys():
             return None
+        #TODO: really want to search by app_num
         uni = profile_data[u_field_name]
-        if not re.search(uni_filter_regexp, uni):
+        if not re.search(uni_filter_regexp, uni):  ### TODO: means app_num lists will sort by GPA1 (uni_filter_regexp is *)
             return None
         if not gpa_field_name in profile_data:
             return None
@@ -241,10 +243,10 @@ if __name__ == '__main__':
             return None
 
     def extract_gpa_from_multiple_fields(profile_data):
-        gpa1 = extract_gpa(profile_data, "UNI_1","GPA_1")
+        gpa1 = extract_gpa(profile_data, GradAppsField.UNI_1,GradAppsField.GPA_1)
         if gpa1:
             return gpa1
-        gpa2 = extract_gpa(profile_data, "UNI_2","GPA_2")
+        gpa2 = extract_gpa(profile_data, GradAppsField.UNI_2,GradAppsField.GPA_2)
         if gpa2:
             return gpa2
         return None
@@ -254,14 +256,8 @@ if __name__ == '__main__':
         gpa = extract_gpa_from_multiple_fields(profile_data)
         if gpa:
             return gpa
-        # if didn't find any, try dreadful hack based on SGS gpa data
-        inst = profile_data[GradAppsField.DCS_UNION_INSTITUTION]
-        fields = inst.split('|')
-        #dreadful hack to get around 3.85/4 business
-        gpa_str = fields[4].split("/")[0] 
-        try:
-            return float(gpa_str)
-        except:
+        else:
+            print("gpa parsing failed, using zero")
             return 0.0
 
     # warning, this depends on secret knowledge of gradapps status codes
@@ -269,10 +265,10 @@ if __name__ == '__main__':
         1: "Reject",
         2: "Pass-Star",
         3: "Pass-VGE",
-        4:  "NCS-Reject",
-        5:  "NCS-Pass",
-        6:  "Pass-Unsure",
-        7:  "Pass-Good",
+        4: "NCS-Reject",
+        5: "NCS-Pass",
+        6: "Pass-Unsure",
+        7: "Pass-Good",
         }
         
     def extract_prefilter_status(profile_data):
