@@ -90,26 +90,15 @@ def dict_from_profile_data_file(fn):
         import re
         rec = {}
         for line in profile_data_file:
-            if re.search("sp342-value",line):
-                if VERBOSE: print("SGS#",line)
-                rec["SGS_NUM"] = parse_rhs_profile_data_line(line)
-            elif re.search("sp364-value",line):
-                if VERBOSE: print("union institution", line)
-                if VERBOSE: print(parse_rhs_profile_data_line(line))
-                rec["DCS_UNION_INSTITUTION"] = parse_rhs_profile_data_line(line)
-            elif re.search("sp363-value",line):
-                if VERBOSE: print("status", line)
-                rec["DCS_STATUS"] = parse_rhs_profile_data_line(line)
-            elif re.search("sp29-value",line):
-                rec["UNI_1"] = parse_rhs_profile_data_line(line)
-            elif re.search("sp35-value",line):
-                rec["GPA_1"] = parse_rhs_profile_data_line(line)
-            elif re.search("sp87-value",line):
-                rec["UNI_2"] = parse_rhs_profile_data_line(line)
-            elif re.search("sp92-value",line):
-                rec["GPA_2"] = parse_rhs_profile_data_line(line)
-            elif re.search("sp418-value",line):
-                rec["PREFILTER_STATUS"] = parse_rhs_profile_data_line(line)
+            for gf in GradAppsField:
+                sp_key = str(gf).replace('GradAppsField.','')
+                sp_num = int(gf)
+                if re.search("sp" + str(sp_num) + "-value", line):
+                    #print(line.strip())
+                    rhs = parse_rhs_profile_data_line(line)
+                    #print("matches", sp_key, sp_num, rhs)
+                    rec[sp_key] = rhs
+                    #print("rec[",sp_key,"]=",rhs)
         return rec
     
 def dict_from_profile_data_file_old(fn):
