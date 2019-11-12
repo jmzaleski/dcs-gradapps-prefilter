@@ -265,35 +265,7 @@ if __name__ == '__main__':
         except:
             return 0.0
 
-    def extract_prefilter_status_old(profile_data):
-        # TODO: remove!
-        pfs = profile_data["PREFILTER_STATUS"]
-        #print("pfs:>>" + pfs + "<<")
-        #looks like starts out unset
-        if pfs == None or len(pfs) == 0:
-            return "-"
-        try:
-            ix_pfs = int(pfs)
-        except:
-            return "undef" #not an int? gawd busted?
-        #TODO: DRY this up wrt gradapps_response_map 
-        if ix_pfs == 1:
-            return "Reject"
-        elif ix_pfs == 2:
-            return "Pass-Star"
-        elif ix_pfs == 3:
-            return "Pass-VGE"
-        elif ix_pfs == 4:
-            return "NCS-Reject"
-        elif ix_pfs == 5:
-            return "NCS-Pass"
-        elif ix_pfs == 6:
-            return "Pass-Unsure"
-        elif ix_pfs == 7:
-            return "Pass-Good"   ###### hey what gives??
-        else:
-            return pfs
-
+    # warning, this depends on secret knowledge of gradapps status codes
     prefilter_status_map = {
         1: "Reject",
         2: "Pass-Star",
@@ -306,16 +278,10 @@ if __name__ == '__main__':
         
     def extract_prefilter_status(profile_data):
         try:
-            pfs = prefilter_status_map[int(profile_data["PREFILTER_STATUS"])]
-            old = extract_prefilter_status_old(profile_data)
-            assert pfs == old
-            return pfs
+            return prefilter_status_map[int(profile_data["PREFILTER_STATUS"])]
         except:
             return "-"
 
-    def gawk(app_num):
-        profile_data = app_num_to_profile_data[app_num]
-        return extract_gpa_for_sorted(profile_data)
 
     def pretty_print_app_list(app_num_to_profile_data_dict,num_list,after_map):
         "print the list of applicants to filter, or just after filtering"
@@ -339,6 +305,11 @@ if __name__ == '__main__':
                       profile_data["DCS_UNION_INSTITUTION"].rstrip('|')
                       )
         print("===============================\n")
+
+    def gawk(app_num):
+        "TODO: replace with lambda"
+        profile_data = app_num_to_profile_data[app_num]
+        return extract_gpa_for_sorted(profile_data)
         
     app_num_list = sorted(app_num_list,key=gawk,reverse=True)
     pretty_print_app_list(app_num_to_profile_data,app_num_list,None)
