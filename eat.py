@@ -265,7 +265,8 @@ if __name__ == '__main__':
         except:
             return 0.0
 
-    def extract_prefilter_status(profile_data):
+    def extract_prefilter_status_old(profile_data):
+        # TODO: remove!
         pfs = profile_data["PREFILTER_STATUS"]
         #print("pfs:>>" + pfs + "<<")
         #looks like starts out unset
@@ -292,6 +293,25 @@ if __name__ == '__main__':
             return "Pass-Good"   ###### hey what gives??
         else:
             return pfs
+
+    prefilter_status_map = {
+        1: "Reject",
+        2: "Pass-Star",
+        3: "Pass-VGE",
+        4:  "NCS-Reject",
+        5:  "NCS-Pass",
+        6:  "Pass-Unsure",
+        7:  "Pass-Good",
+        }
+        
+    def extract_prefilter_status(profile_data):
+        try:
+            pfs = prefilter_status_map[int(profile_data["PREFILTER_STATUS"])]
+            old = extract_prefilter_status_old(profile_data)
+            assert pfs == old
+            return pfs
+        except:
+            return "-"
 
     def gawk(app_num):
         profile_data = app_num_to_profile_data[app_num]
