@@ -12,6 +12,7 @@ fi
 
 echo running prefilter helper filtered by $app_num ...
 
+#the * is important.
 echo python3 $TOOLS/eat.py -"$app_num" '".*"'
 
 set -x
