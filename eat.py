@@ -73,10 +73,12 @@ def completed_dict_from_applicationStatus_file(fn):
 
 from enum import IntEnum
 class GradAppsField(IntEnum):
+    "enum reverse engineering internal gradapps data fields"
+    # danger this depends on knowledge of internal gradapps data layout
     UNI_1   = 29
     GPA_1   = 35
     UNI_2   = 87
-    GPA_2   = 92
+    GPA_2   = 92   #TODO: add GPA_3
     SGS_NUM = 342
     DCS_STATUS  = 363
     DCS_UNION_INSTITUTION = 364
@@ -91,45 +93,12 @@ def dict_from_profile_data_file(fn):
         rec = {}
         for line in profile_data_file:
             for gf in GradAppsField:
-                sp_key = str(gf).replace('GradAppsField.','')
-                sp_num = int(gf)
-                if re.search("sp" + str(sp_num) + "-value", line):
-                    #print(line.strip())
+                if re.search("sp" + str(int(gf)) + "-value", line):
                     rhs = parse_rhs_profile_data_line(line)
-                    #print("matches", sp_key, sp_num, rhs)
-                    rec[sp_key] = rhs
-                    #print("rec[",sp_key,"]=",rhs)
+                    rec[gf] = rhs
+                    if VERBOSE: print("line: ", line.strip(),"matches:",gf,rhs)
         return rec
     
-def dict_from_profile_data_file_old(fn):
-    "turn a profile.data file into a dictionary with only a few fields"
-    #TODO: this is ugly brute force. I'm sure there are fancy libs to do this pretty
-    if VERBOSE: print(fn)
-    with open(fn,"r") as profile_data_file:
-        import re
-        rec = {}
-        for line in profile_data_file:
-            if re.search("sp342-value",line):
-                if VERBOSE: print("SGS#",line)
-                rec["SGS_NUM"] = parse_rhs_profile_data_line(line)
-            elif re.search("sp364-value",line):
-                if VERBOSE: print("union institution", line)
-                if VERBOSE: print(parse_rhs_profile_data_line(line))
-                rec["DCS_UNION_INSTITUTION"] = parse_rhs_profile_data_line(line)
-            elif re.search("sp363-value",line):
-                if VERBOSE: print("status", line)
-                rec["DCS_STATUS"] = parse_rhs_profile_data_line(line)
-            elif re.search("sp29-value",line):
-                rec["UNI_1"] = parse_rhs_profile_data_line(line)
-            elif re.search("sp35-value",line):
-                rec["GPA_1"] = parse_rhs_profile_data_line(line)
-            elif re.search("sp87-value",line):
-                rec["UNI_2"] = parse_rhs_profile_data_line(line)
-            elif re.search("sp92-value",line):
-                rec["GPA_2"] = parse_rhs_profile_data_line(line)
-            elif re.search("sp418-value",line):
-                rec["PREFILTER_STATUS"] = parse_rhs_profile_data_line(line)
-        return rec
 
 def parse_dir_path_for_app_number(path):
     "we figure out the app number by cracking open the dir path to the profile.data file"
@@ -156,7 +125,7 @@ def build_dict_of_dicts(list_of_app_numbers):
     for app_num in list_of_app_numbers:
         d = dict_from_profile_data_file(concoct_profile_data_file_name_from_app_number(app_num))
         profile_data_by_app_number[app_num] = d
-        profile_data_by_sgs_number[d["SGS_NUM"]] = d
+        profile_data_by_sgs_number[d[GradAppsField.SGS_NUM]] = d
         #print(profile_data_by_sgs_number)
     return (profile_data_by_app_number, profile_data_by_sgs_number)
 
@@ -237,7 +206,7 @@ if __name__ == '__main__':
     app_num_list = []
     for app_num in app_num_to_profile_data.keys():
         profile_data = app_num_to_profile_data[app_num]
-        institution = profile_data["DCS_UNION_INSTITUTION"]
+        institution = profile_data[GradAppsField.DCS_UNION_INSTITUTION]
         if not re.search(uni_filter_regexp, institution):
             if VERBOSE: print("skip", app_num, "because", institution, "not matched by", uni_filter_regexp)
         else:
@@ -286,7 +255,7 @@ if __name__ == '__main__':
         if gpa:
             return gpa
         # if didn't find any, try dreadful hack based on SGS gpa data
-        inst = profile_data["DCS_UNION_INSTITUTION"]
+        inst = profile_data[GradAppsField.DCS_UNION_INSTITUTION]
         fields = inst.split('|')
         #dreadful hack to get around 3.85/4 business
         gpa_str = fields[4].split("/")[0] 
@@ -308,7 +277,7 @@ if __name__ == '__main__':
         
     def extract_prefilter_status(profile_data):
         try:
-            return prefilter_status_map[int(profile_data["PREFILTER_STATUS"])]
+            return prefilter_status_map[int(profile_data[GradAppsField.PREFILTER_STATUS])]
         except:
             return "-"
 
@@ -321,9 +290,9 @@ if __name__ == '__main__':
                 
             profile_data = app_num_to_profile_data_dict[app_num]
             if after_map:
-                sgs_num = profile_data["SGS_NUM"]
+                sgs_num = profile_data[GradAppsField.SGS_NUM]
                 if sgs_num in after_map:
-                    prefilter_status = after_map[profile_data["SGS_NUM"]]
+                    prefilter_status = after_map[profile_data[GradAppsField.SGS_NUM]]
                 else:
                     prefilter_status = "Skip" #skipped making decision, so nothing in map
             else:
@@ -331,8 +300,8 @@ if __name__ == '__main__':
             print(app_num,
                       "%11s"   % prefilter_status,
                       "%5.1f" % extract_gpa_for_sorted(profile_data),
-                      profile_data["SGS_NUM"],
-                      profile_data["DCS_UNION_INSTITUTION"].rstrip('|')
+                      profile_data[GradAppsField.SGS_NUM],
+                      profile_data[GradAppsField.DCS_UNION_INSTITUTION].rstrip('|')
                       )
         print("===============================\n")
 
@@ -430,7 +399,7 @@ if __name__ == '__main__':
         resp = ""
         while True:
             print("choose dcs prefilter status for application >>>",app_num,"<<< from menu below")
-            print(app_num_to_profile_data[app_num]["DCS_UNION_INSTITUTION"])
+            print(app_num_to_profile_data[app_num][GradAppsField.DCS_UNION_INSTITUTION])
             
             ########## menu for actual decision 
             resp = menu.menu()
@@ -451,7 +420,7 @@ if __name__ == '__main__':
             print(resp)
             try:
                 profile_data = app_num_to_profile_data[app_num]
-                decisions[profile_data["SGS_NUM"]] = gradapps_response
+                decisions[profile_data[GradAppsField.SGS_NUM]] = gradapps_response
             
                 ########## paranoidly, write every time
                 # megaparanoid would be to copy file each time to tmp
