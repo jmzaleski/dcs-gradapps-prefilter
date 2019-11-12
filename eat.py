@@ -253,7 +253,7 @@ if __name__ == '__main__':
         gpa2 = extract_gpa(profile_data, GradAppsField.UNI_2,GradAppsField.FINAL_AVG_2)
         if gpa2:
             return gpa2
-        gpa3 = extract_gpa(profile_data, GradAppsField.UNI_2,GradAppsField.FINAL_AVG_3)
+        gpa3 = extract_gpa(profile_data, GradAppsField.UNI_3,GradAppsField.FINAL_AVG_3)
         if gpa3:
             return gpa3
         
