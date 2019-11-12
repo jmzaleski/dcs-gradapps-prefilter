@@ -261,6 +261,7 @@ if __name__ == '__main__':
             return 0.0
 
     # warning, this depends on secret knowledge of gradapps status codes
+    # (the int values depend on the order of some radio button that Lloyd set up)
     prefilter_status_map = {
         1: "Reject",
         2: "Pass-Star",
@@ -269,18 +270,19 @@ if __name__ == '__main__':
         5: "NCS-Pass",
         6: "Pass-Unsure",
         7: "Pass-Good",
+        8: "NCS-Star",
         }
         
     def extract_prefilter_status(profile_data):
+        "map the prefilter status value extracted from gradapps to its string name"
         try:
             return prefilter_status_map[int(profile_data[GradAppsField.PREFILTER_STATUS])]
         except:
             return "-"
 
-
     def pretty_print_app_list(app_num_to_profile_data_dict,num_list,after_map):
         "print the list of applicants to filter, or just after filtering"
-        # TODO: cleanup disgusting after_map BS (reuse this code in heat of battle)
+        # TODO: figure out better way to do nasty after_map thing (needed to reuse this code in heat of battle)
         print("\n\n===============================\nAPPS matching: ",uni_filter_regexp)
         for app_num in num_list:
                 
@@ -355,10 +357,11 @@ if __name__ == '__main__':
                            'r' : "Reject:       Reject application. fails prefilter",
                            'x' : "NCS-Reject:   not enough CS. Fails prefilter",
                            'y' : "NCS-Pass:     not enough CS but stellar enough to pass prefilter",
+                           'z' : "NCS-Star:     not enough CS.. yet stellar",
                            'S' : "SKIP setting Prefilter_Status"
                         }
     #order to display menu items in 
-    response_code_list = ['r', 's','v','g','u','x','y','S']
+    response_code_list = ['r', 's','v','g','u','x','y','z','S']
 
     #map responses to gradapps prefilter status column values
     gradapps_response_map = { 's' : "Pass-Star",
@@ -368,6 +371,7 @@ if __name__ == '__main__':
                            'r' : "Reject",
                            'x' : "NCS-Reject",
                            'y' : "NCS-Pass",
+                           'z' : "NCS-Star",
                         }
     
     menu = PrefilterMenu(response_code_list, menu_line_dict ,"enter a letter followed by enter> ")
@@ -411,7 +415,7 @@ if __name__ == '__main__':
             #print("resp:", resp, gradapps_response)
 
             if gradapps_response == None:
-                print("gotta choose something here. looping around")
+                print("gotta choose something here. looping back to same application")
                 continue
             print(resp)
             try:
