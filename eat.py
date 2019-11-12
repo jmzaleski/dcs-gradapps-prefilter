@@ -75,18 +75,18 @@ from enum import IntEnum
 class GradAppsField(IntEnum):
     "enum reverse engineering internal gradapps data fields"
     # danger this depends on knowledge of internal gradapps data layout
-    UNI_1   = 29     # in UI: Academic History: University 1 Name and Location
+    UNI_1   = 29       # in UI: Academic History: University 1 Name and Location
     UNI_2   = 87
     UNI_3   = 97
-    #GPA_1   = 35    # Academic History: University 2 Final Year Average
-    #GPA_2   = 92   
-    FINAL_AVG_1 = 36 # Academic History: University 1 Overall Average
-    FINAL_AVG_2 = 92
-    FINAL_AVG_3 = 102
+    OVERALL_AVG_1 = 36 # Academic History: University 1 Overall Average
+    OVERALL_AVG_2 = 92
+    OVERALL_AVG_3 = 102
     SGS_NUM = 342
     DCS_STATUS  = 363
     DCS_UNION_INSTITUTION = 364
     PREFILTER_STATUS = 418
+    #GPA_1   = 35      # Academic History: University 2 Final Year Average
+    #GPA_2   = 92   
 
 def dict_from_profile_data_file(fn):
     "turn a profile.data file into a dictionary with only a few fields"
@@ -247,13 +247,13 @@ if __name__ == '__main__':
             return None
 
     def extract_gpa_from_multiple_fields(profile_data):
-        gpa1 = extract_gpa(profile_data, GradAppsField.UNI_1,GradAppsField.FINAL_AVG_1)
+        gpa1 = extract_gpa(profile_data, GradAppsField.UNI_1,GradAppsField.OVERALL_AVG_1)
         if gpa1:
             return gpa1
-        gpa2 = extract_gpa(profile_data, GradAppsField.UNI_2,GradAppsField.FINAL_AVG_2)
+        gpa2 = extract_gpa(profile_data, GradAppsField.UNI_2,GradAppsField.OVERALL_AVG_2)
         if gpa2:
             return gpa2
-        gpa3 = extract_gpa(profile_data, GradAppsField.UNI_3,GradAppsField.FINAL_AVG_3)
+        gpa3 = extract_gpa(profile_data, GradAppsField.UNI_3,GradAppsField.OVERALL_AVG_3)
         if gpa3:
             return gpa3
         
@@ -265,7 +265,7 @@ if __name__ == '__main__':
         if gpa:
             return gpa
         else:
-            print("gpa parsing failed, using zero")
+            print("grade field parsing failed, using zero")
             return 0.0
 
     # warning, this depends on secret knowledge of gradapps status codes
