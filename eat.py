@@ -306,12 +306,10 @@ if __name__ == '__main__':
                       )
         print("===============================\n")
 
-    def gawk(app_num):
-        "TODO: replace with lambda"
-        profile_data = app_num_to_profile_data[app_num]
-        return extract_gpa_for_sorted(profile_data)
-        
-    app_num_list = sorted(app_num_list,key=gawk,reverse=True)
+    app_num_list = sorted(app_num_list,
+                          key=lambda app_num: extract_gpa_for_sorted(app_num_to_profile_data[app_num]),
+                          reverse=True
+                          )
     pretty_print_app_list(app_num_to_profile_data,app_num_list,None)
 
     try:
