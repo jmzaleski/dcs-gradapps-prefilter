@@ -90,7 +90,7 @@ class GradAppsField(IntEnum):
 
 def dict_from_profile_data_file(fn):
     "turn a profile.data file into a dictionary with only a few fields"
-    #TODO: this is ugly brute force. I'm sure there are fancy libs to do this pretty
+    #TODO: using a dict is ugly. I'm sure there are fancy libs to do this pretty
     if VERBOSE: print(fn)
     with open(fn,"r") as profile_data_file:
         import re
@@ -102,10 +102,9 @@ def dict_from_profile_data_file(fn):
                     rec[gf] = rhs
                     if VERBOSE: print("line: ", line.strip(),"matches:",gf,rhs)
         return rec
-    
 
 def parse_dir_path_for_app_number(path):
-    "we figure out the app number by cracking open the dir path to the profile.data file"
+    "we grub out the app number by cracking open the dir path to the profile.data file"
     try:
         l = path.split("public_html/data")
         d = l[1].split("/")
@@ -125,13 +124,10 @@ def concoct_profile_data_file_name_from_app_number(app_num):
 def build_dict_of_dicts(list_of_app_numbers):
     """read the listed app_num's, concoct the path to the profile.data file and turn the data there into a dict"""
     profile_data_by_app_number = {}
-    profile_data_by_sgs_number = {}
     for app_num in list_of_app_numbers:
         d = dict_from_profile_data_file(concoct_profile_data_file_name_from_app_number(app_num))
         profile_data_by_app_number[app_num] = d
-        profile_data_by_sgs_number[d[GradAppsField.SGS_NUM]] = d
-        #print(profile_data_by_sgs_number)
-    return (profile_data_by_app_number, profile_data_by_sgs_number)
+    return profile_data_by_app_number
 
 def list_of_app_numbers(fn_of_app_numbers):
     """read the listed app_num's, concoct the path to the profile.data file and turn the data there into a dict"""
@@ -149,10 +145,6 @@ def list_of_app_numbers(fn_of_app_numbers):
          return None
     return list_of_app_numbers
 
-def build_dict_of_dicts_fn_of_file_numbers(fn_of_app_numbers):
-    """read the listed app_num's, concoct the path to the profile.data file and turn the data there into a dict"""
-    return build_dict_of_dicts(list_of_app_numbers(fn_of_app_numbers))
-    
 def parse_positional_args():
     "parse the command line parameters of this program"
     import argparse
@@ -188,7 +180,6 @@ if __name__ == '__main__':
 
     #out of control parm parsing. can do - or -123 or -"123 456"
     if fn_app_num_list.startswith('-'):
-        #TODO: this should also arrange to sort by this list
         if len(fn_app_num_list)>1:
             fields = fn_app_num_list[1:].split(" ")
             if len(fields) == 1:
@@ -202,11 +193,9 @@ if __name__ == '__main__':
     else:
         app_num_list = list_of_app_numbers(fn_app_num_list)
         
-    (app_num_to_profile_data,sgs_num_to_profile_data) = build_dict_of_dicts(app_num_list)
+    app_num_to_profile_data = build_dict_of_dicts(app_num_list)
 
-    if VERBOSE:
-        print("app_num_to_profile_data",app_num_to_profile_data)
-        print("\n\n\nsgs_num_to_profile_data",sgs_num_to_profile_data)
+    if VERBOSE: print("app_num_to_profile_data",app_num_to_profile_data)
 
     #TODO this re-sorts by GPA. bug? maybe should leave sort by app_num_list as above
     app_num_list = []
@@ -234,9 +223,8 @@ if __name__ == '__main__':
     def extract_gpa(profile_data, u_field_name,gpa_field_name):
         if not u_field_name in profile_data.keys():
             return None
-        #TODO: really want to search by app_num
         uni = profile_data[u_field_name]
-        if not re.search(uni_filter_regexp, uni):  ### TODO: means app_num lists will sort by GPA1 (uni_filter_regexp is *)
+        if not re.search(uni_filter_regexp, uni): 
             return None
         if not gpa_field_name in profile_data:
             return None
@@ -290,10 +278,9 @@ if __name__ == '__main__':
 
     def pretty_print_app_list(app_num_to_profile_data_dict,num_list,after_map):
         "print the list of applicants to filter, or just after filtering"
-        # TODO: figure out better way to do nasty after_map thing (needed to reuse this code in heat of battle)
+        # TODO: figure out better way to do nasty after_map thing (needed to reuse this code to pretty print after menu)
         print("\n\n===============================\nAPPS matching: ",uni_filter_regexp)
         for app_num in num_list:
-                
             profile_data = app_num_to_profile_data_dict[app_num]
             if after_map:
                 sgs_num = profile_data[GradAppsField.SGS_NUM]
@@ -417,7 +404,7 @@ if __name__ == '__main__':
             
             if resp.startswith('S'):
                 print("okay, skipping", app_num)
-                break ######### SORRY.. goes to next application (or once did) TODO: fix break
+                break ######### SORRY.. goes to next application (or once did) 
             
             gradapps_response = gradapps_response_map[resp]
             #print("resp:", resp, gradapps_response)
