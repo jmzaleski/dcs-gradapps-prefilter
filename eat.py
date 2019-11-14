@@ -5,11 +5,12 @@ def die(*objs):
     print("ERROR: ", *objs, file=sys.stderr)
     exit(42)
 
-HOME_DIR="/Users/mzaleski"
+HOME_DIR = os.environ['HOME'] 
+if not os.path.exists(HOME_DIR): die("HOME_DIR", HOME_DIR, "does not exist")
 assert os.path.exists(HOME_DIR)
 
-TOOLS_DIR = os.path.join(HOME_DIR,"git/dcs-gradapps-prefilter/")
-assert os.path.exists(TOOLS_DIR)
+TOOLS_DIR = os.path.join(HOME_DIR,"git","dcs-gradapps-prefilter")
+if not os.path.exists(TOOLS_DIR): die("TOOLS_DIR", TOOLS_DIR, "does not exist")
 
 #root of unzipped archive of gradapps files
 MSCAC_UNZIP_DIR = os.path.join(HOME_DIR,"mscac")
@@ -17,11 +18,11 @@ if not os.path.exists(MSCAC_UNZIP_DIR): die(MSCAC_UNZIP_DIR, "does not exist")
 
 #dir where transcripts, sop, cv live
 MSCAC_PAPERS_DIR = os.path.join(MSCAC_UNZIP_DIR,"public_html","papers")
-assert os.path.exists(MSCAC_PAPERS_DIR)
+if not os.path.exists(MSCAC_PAPERS_DIR): die(MSCAC_PAPERS_DIR, "does not exist")
 
 #dir where application dirs containing profile.data live
 MSCAC_PROFILE_DATA_ROOT_DIR = os.path.join(MSCAC_UNZIP_DIR,"public_html","data")
-assert os.path.exists(MSCAC_PROFILE_DATA_ROOT_DIR)
+if not os.path.exists(MSCAC_PROFILE_DATA_ROOT_DIR): die(MSCAC_PROFILE_DATA_ROOT_DIR, "does not exist")
 
 #shell script to fire up viewers on PDF files
 VIEWER = os.path.join(TOOLS_DIR,"view-files.sh")
@@ -29,9 +30,9 @@ assert os.path.exists(VIEWER)
 
 #file listing which apps are complete
 COMPLETE_FILE = os.path.join(MSCAC_UNZIP_DIR,"public_html/admin/applicationStatus")
-assert os.path.exists(COMPLETE_FILE)
+if not os.path.exists(COMPLETE_FILE): die(COMPLETE_FILE, "does not exist")
 
-VERBOSE = False
+VERBOSE = True
 
 #output file directory
 MSCAC_PREFILTER_DIR_NAME = "mscac-prefilter"
@@ -202,6 +203,7 @@ if __name__ == '__main__':
     for app_num in app_num_to_profile_data.keys():
         profile_data = app_num_to_profile_data[app_num]
         institution = profile_data[GradAppsField.DCS_UNION_INSTITUTION]
+        if VERBOSE: print(uni_filter_regexp, institution)
         if not re.search(uni_filter_regexp, institution):
             if VERBOSE: print("skip", app_num, "because", institution, "not matched by", uni_filter_regexp)
         else:
