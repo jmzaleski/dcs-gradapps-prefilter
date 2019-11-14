@@ -1,6 +1,8 @@
 from __future__ import print_function  #allows print as function
 import sys, os.path
 
+VERBOSE = False
+
 def die(*objs):
     print("ERROR: ", *objs, file=sys.stderr)
     exit(42)
@@ -17,6 +19,7 @@ if not os.path.exists(MSCAC_UNZIP_DIR): die(MSCAC_UNZIP_DIR, "does not exist")
 
 #dir where transcripts, sop, cv live
 MSCAC_PAPERS_DIR = os.path.join(MSCAC_UNZIP_DIR,"public_html","papers")
+#replace assert with die
 assert os.path.exists(MSCAC_PAPERS_DIR)
 
 #dir where application dirs containing profile.data live
@@ -30,8 +33,6 @@ assert os.path.exists(VIEWER)
 #file listing which apps are complete
 COMPLETE_FILE = os.path.join(MSCAC_UNZIP_DIR,"public_html/admin/applicationStatus")
 assert os.path.exists(COMPLETE_FILE)
-
-VERBOSE = False
 
 #output file directory
 MSCAC_PREFILTER_DIR_NAME = "mscac-prefilter"
@@ -65,7 +66,6 @@ def completed_dict_from_applicationStatus_file(fn):
             fields = line.split(" ")
             assert len(fields) == 2
             if re.search("complete",fields[1]):
-                assert re.search("complete",line)
                 map[fields[0]] = True
             else:
                 map[fields[0]] = False
