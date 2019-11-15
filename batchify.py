@@ -33,8 +33,10 @@ if __name__ == '__main__':
             for line in af:
                 if re.search("Reject",line):
                     continue
+                if re.search("Unsure",line): #sure?
+                    continue
                 fields = line.strip().split(",")
-                print("%s,batch-%0d3-%0d3" % (fields[0], batch_ix, ix) )
+                print("%s,batch-%0d2-%0d2" % (fields[0], batch_ix, ix) )
                 ix += 1
         batch_ix += 1
             
