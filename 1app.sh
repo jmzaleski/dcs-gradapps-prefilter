@@ -12,8 +12,9 @@ fi
 
 echo running prefilter helper filtered by $app_num ...
 
+DCS_STATUS=pf
 #the * is important.
-echo python3 $TOOLS/eat.py -"$app_num" '".*"'
+echo python3 $TOOLS/eat.py -"$app_num" '".*"' $DCS_STATUS
 
 set -x
-python3 $TOOLS/eat.py -"$app_num" '.*'
+python3 $TOOLS/eat.py -"$app_num" '.*' $DCS_STATUS
