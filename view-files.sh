@@ -1,15 +1,25 @@
 #!/bin/bash
 
+
 #exec'd from gradapps prefilter app
+
+case $PATH in
+	*WINDOWS* )
+		CMD="cygstart"
+		;;
+	*)
+		CMD="open -a Preview.app"
+		;;
+esac
 
 for i in $*
 do
 	if test -f $i
 	then
 		#ls -l $i
-		open -a Preview.app $i
+		$CMD $i
 	else
-		echo sorry $i not found
+		echo $0: $i not found
 	fi
 done
 
