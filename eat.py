@@ -478,8 +478,9 @@ if __name__ == '__main__':
     # rest of script largely BS for convenience putting the output somewhere useful
     #########
     print("\n=========================")
-    os.system("cat " + OFN)
     os.system("ls -l " + OFN)
+    os.system("cat " + OFN)
+    print("=========================\n")
     print("""next import these prefilter decisions into the gradapps system:
     1. copy/rsync files to apps1 
     2. run curl commands to gradapps server to update dcs application status and prefilter status columns""")
@@ -494,26 +495,25 @@ if __name__ == '__main__':
     curl_dcsstatus_cmd =  CURL_TEMPL % ( BFN_basename, URL_TEMPL % "dcsstatus" )
 
     # probably will need ssh config support or will prompt for password
-    print(rsync_cmd)
+    #print(rsync_cmd)
     #print("ssh qew", "'" + curl_cmd + "'") #gross quoting, sorry
-    print("=========================\n")
-    resp = input("hit Enter to exec rsync above (control-c only way to skip rsync) > ")
-    if not resp.startswith('s'):
-        os.system(rsync_cmd)
+    print(OFN,BFN)
+    resp = input("hit Enter to exec rsync to %s  > " % CSLAB_USERID)
+    if resp.startswith('s'):
+        os.system("ls -l %s %s" % (OFN,BFN))
+        die("prefilter decisions not uploaded to gradapps")
 
-    print("check that rsync'd files made it..")
-    os.system("ssh %s ls -ltr %s/" % (CSLAB_USERID, MSCAC_PREFILTER_DIR_NAME))
+    os.system(rsync_cmd)
+    print("ls -ltr | tail -2 to see if rsync'd files made it..")
+    os.system("ssh %s ls -ltr %s/ | tail -2" % (CSLAB_USERID, MSCAC_PREFILTER_DIR_NAME))
 
     #print("\nnow ssh to", CSLAB_USERID, "and curl file to gradapps\n\n")
     ssh_cmd = "ssh -tt %s '%s'" % (CSLAB_USERID, curl_cmd )
     ssh_dcsstatus_cmd = "ssh -tt %s '%s'" % (CSLAB_USERID, curl_dcsstatus_cmd)
-    print(ssh_cmd)
-    print(ssh_dcsstatus_cmd)
-    resp = input("hit enter to curl the prefilter choices to gradapps server.. > ")
+    #print(ssh_cmd)
+    #print(ssh_dcsstatus_cmd)
+    #resp = input("hit enter to curl the prefilter choices to gradapps server.. > ")
     os.system(ssh_cmd)
     os.system(ssh_dcsstatus_cmd)
 
-    # something missing i think it must be the form id. fiddle more later
-    # print("..or probably better if you are on a unix machine..")
-    # # ssh -tt forces allocation of "pseudo terminal" so that curl's nattering makes it back
-    # print('\n\ncat ~/mscac-prefilter/%s | ssh -tt qew curl -F - "%s"' % (OFN_basename,URL))
+
