@@ -5,7 +5,7 @@ TOOLS=~/git/dcs-gradapps-prefilter/
 if test ! -z "$1"
 then
 	SCHOOL="$1"
-	read -p "hit enter to filter by $SCHOOL >" junk
+	echo $0 "filter by $SCHOOL"
 else
 	read -p "pre-filter by SCHOOL? (enter filter string eg TORONTO and hit enter to continue) > " SCHOOL
 fi
