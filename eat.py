@@ -392,7 +392,6 @@ if __name__ == '__main__':
                            'z' : "NCS-Star",
                         }
     
-    menu = PrefilterMenu(response_code_list, menu_line_dict ,"enter a letter followed by enter> ")
 
     import uuid #universal unique resource naming thingy
     s = str(uuid.uuid4())
@@ -427,6 +426,9 @@ if __name__ == '__main__':
             print("choose dcs prefilter status for application >>>",app_num,"<<< from menu below")
                         
             ########## menu for actual decision 
+            prompt = "%s)% 5.2f enter a letter > " % (str(app_num), extract_gpa_for_sorted(app_num_to_profile_data[app_num]))
+            menu = PrefilterMenu(response_code_list, menu_line_dict , prompt)
+            
             resp = menu.menu()
             if resp == None:
                 print("\n\nwonky reponse (interrupt key pressed?) from menu",resp)
