@@ -6,6 +6,13 @@
 
 CMD="rsync -av gradbackup@gradapps.cs.toronto.edu:archive/mscac.2020/mscac20/public_html ."
 
+if test ! -d public_html
+then
+	/bin/pwd
+	echo where are you? cannot see public_html dir in .
+	exit 2
+fi
+
 echo you will exec: $CMD
 read -p "hit enter to rsync gradapps backup to . > " JUNK
 set -x
