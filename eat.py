@@ -83,6 +83,7 @@ class GradAppsField(IntEnum):
     OVERALL_AVG_1 = 36 # Academic History: University 1 Overall Average
     OVERALL_AVG_2 = 92
     OVERALL_AVG_3 = 102
+    GENDER = 338
     SGS_NUM = 342
     DCS_STATUS  = 363
     DCS_UNION_INSTITUTION = 364
@@ -93,6 +94,7 @@ class GradAppsField(IntEnum):
 def dict_from_profile_data_file(fn):
     "turn a profile.data file into a dictionary with only a few fields"
     #TODO: using a dict is ugly. I'm sure there are fancy libs to do this pretty
+    #VERBOSE = True
     if VERBOSE: print(fn)
     with open(fn,"r") as profile_data_file:
         import re
@@ -304,6 +306,7 @@ if __name__ == '__main__':
             else:
                 prefilter_status = extract_prefilter_status(profile_data)
             print(app_num,
+                      profile_data[GradAppsField.GENDER],
                       "%11s"   % prefilter_status,
                       "%5.1f" % extract_gpa_for_sorted(profile_data),
                       profile_data[GradAppsField.SGS_NUM],
@@ -335,14 +338,15 @@ if __name__ == '__main__':
         print("prefilter above " + str(len(app_num_list)) + " applications?")
         print("matching filter:", uni_filter_regexp)
         print("setting DCS application status field stem: " + dcs_app_status )
-        response = input("enter to continue, q to exit")
-        if response == None or (len(response) > 0 and not response.lower().startswith("y")):
-            die("actually entering any char bails out.. only hitting enter alone continues.. :)")
+        response = input("enter to continue, q to exit > ")
     except:
         response = None
         import traceback
         traceback.print_exc(file=sys.stderr)
-        die("oops")        
+        die("oops")
+        
+    if response == None or (len(response) > 0 and not response.lower().startswith("y")):
+        die("actually entering any char bails out.. only hitting enter alone continues.. :)")
 
     def read_query_from_input(prompt):
         "UI read a line from stdin"
