@@ -251,8 +251,8 @@ if __name__ == '__main__':
         try:
             return float(gpa_str)
         except:
-            #some students take it into their heads to enter 3.999/4"
-            fields = gpa_str.split("/")
+            #some students take it into their heads to enter "3.999/4", or "89% (first class honours)"
+            fields = re.compile("[%/]").split(gpa_str)
             if len(fields) == 2:
                 try:
                     return float(fields[0])
