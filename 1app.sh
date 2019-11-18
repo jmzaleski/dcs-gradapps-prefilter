@@ -5,7 +5,7 @@ TOOLS=~/git/dcs-gradapps-prefilter/
 if test ! -z "$1"
 then
 	app_num="$*"
-	read -p "hit enter to filter by $app_num >" junk
+	echo  "will filter by $app_num" 
 else
 	read -p "pre-filter enter app_num and hit enter to continue) > " app_num
 fi
