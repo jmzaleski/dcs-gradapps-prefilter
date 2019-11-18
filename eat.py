@@ -28,7 +28,11 @@ if not os.path.exists(MSCAC_PROFILE_DATA_ROOT_DIR): die(MSCAC_PROFILE_DATA_ROOT_
 
 #shell script to fire up viewers on PDF files
 VIEWER = os.path.join(TOOLS_DIR,"view-files.sh")
-assert os.path.exists(VIEWER)
+if not os.path.exists(VIEWER): die(VIEWER, "does not exist")
+
+GREP_SGS_NUM = os.path.join(TOOLS_DIR,"grep-sgs-num.sh")
+if not os.path.exists(GREP_SGS_NUM): die(GREP_SGS_NUM, "does not exist")
+    
 
 #file listing which apps are complete
 COMPLETE_FILE = os.path.join(MSCAC_UNZIP_DIR,"public_html/admin/applicationStatus")
@@ -235,18 +239,26 @@ if __name__ == '__main__':
                 app_num_list.append(app_num)
 
     def extract_gpa(profile_data, u_field_name,gpa_field_name):
+        "WIP extract gpa from text field attempting to work around common applicant mistakes"
         if not u_field_name in profile_data.keys():
             return None
         uni = profile_data[u_field_name]
-        if not re.search(uni_filter_regexp, uni): 
-            return None
+        # if not re.search(uni_filter_regexp, uni): 
+        #     return None
         if not gpa_field_name in profile_data:
             return None
         gpa_str = profile_data[gpa_field_name]
         try:
             return float(gpa_str)
         except:
-            return None
+            #some students take it into their heads to enter 3.999/4"
+            fields = gpa_str.split("/")
+            if len(fields) == 2:
+                try:
+                    return float(fields[0])
+                except:
+                    return None
+        return None
 
     def extract_gpa_from_multiple_fields(profile_data):
         gpa1 = extract_gpa(profile_data, GradAppsField.UNI_1,GradAppsField.OVERALL_AVG_1)
@@ -291,7 +303,7 @@ if __name__ == '__main__':
         except:
             return "-"
 
-    def pretty_print_app_list(app_num_to_profile_data_dict,num_list,after_map):
+    def pretty_print_app_list(app_num_to_profile_data_dict,num_list,file_whatsit,after_map):
         "print the list of applicants to filter, or just after filtering"
         # TODO: figure out better way to do nasty after_map thing (needed to reuse this code to pretty print after menu)
         print("\n\n===============================\nAPPS matching: ",uni_filter_regexp)
@@ -310,7 +322,8 @@ if __name__ == '__main__':
                       "%11s"   % prefilter_status,
                       "%5.1f" % extract_gpa_for_sorted(profile_data),
                       profile_data[GradAppsField.SGS_NUM],
-                      profile_data[GradAppsField.DCS_UNION_INSTITUTION].rstrip('|')
+                      profile_data[GradAppsField.DCS_UNION_INSTITUTION].rstrip('|'),
+                      file=file_whatsit
                       )
             
         print("===============================\n")
@@ -327,12 +340,18 @@ if __name__ == '__main__':
                 line = k + "," + str(dict[k])
                 #print(line)
                 print(line,file=new_file)
-
+                
     app_num_list = sorted(app_num_list,
                           key=lambda app_num: extract_gpa_for_sorted(app_num_to_profile_data[app_num]),
                           reverse=True
                           )
-    pretty_print_app_list(app_num_to_profile_data,app_num_list,None)
+    # check for repeat prefiltering. grep for app_nums in OFN_DIR
+    buf = " "
+    for app_num in app_num_list:
+        buf += str(app_num_to_profile_data[app_num][GradAppsField.SGS_NUM]) + " "
+    os.system(GREP_SGS_NUM + buf)
+    
+    pretty_print_app_list(app_num_to_profile_data,app_num_list,sys.stdout,None)
 
     try:
         print("prefilter above " + str(len(app_num_list)) + " applications?")
@@ -405,7 +424,7 @@ if __name__ == '__main__':
     assert not os.path.exists(OFN)
     write_to_new_file("testwrite",OFN,{}) #test write junk to OFN to make sure have perms and all that
     write_to_new_file("testwrite",BFN,{}) #test write junk to OFN to make sure have perms and all that
-    
+
     #########
     # main loop asking for decisions and writing them (paranoidly) away
     #########
@@ -472,7 +491,7 @@ if __name__ == '__main__':
                 continue
             break
 
-    pretty_print_app_list(app_num_to_profile_data,app_num_list,decisions)
+    pretty_print_app_list(app_num_to_profile_data,app_num_list,sys.stdout,decisions)
 
     #########
     # rest of script largely BS for convenience putting the output somewhere useful
@@ -515,5 +534,8 @@ if __name__ == '__main__':
     #resp = input("hit enter to curl the prefilter choices to gradapps server.. > ")
     os.system(ssh_cmd)
     os.system(ssh_dcsstatus_cmd)
+
+    with open("log","a") as a_file_whatsit:
+        pretty_print_app_list(app_num_to_profile_data,app_num_list,a_file_whatsit,decisions)
 
 
