@@ -491,6 +491,10 @@ if __name__ == '__main__':
                 continue
             break
 
+    if len(decisions) == 0:
+        print("you skipped all applicants. no decisions made. exiting..")
+        exit(0)
+
     pretty_print_app_list(app_num_to_profile_data,app_num_list,sys.stdout,decisions)
 
     #########
@@ -517,7 +521,7 @@ if __name__ == '__main__':
     #print(rsync_cmd)
     #print("ssh qew", "'" + curl_cmd + "'") #gross quoting, sorry
     print(OFN,BFN)
-    resp = input("hit Enter to exec rsync to %s  > " % CSLAB_USERID)
+    resp = input("hit Enter rsync to %s  > " % CSLAB_USERID)
     if resp.startswith('s'):
         os.system("ls -l %s %s" % (OFN,BFN))
         die("prefilter decisions not uploaded to gradapps")
