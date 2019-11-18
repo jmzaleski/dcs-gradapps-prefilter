@@ -164,15 +164,13 @@ def parse_positional_args():
         Note if fn given is -NNN it means app_number NNN, if just - prompts for number        
         """
         )
-    parser.add_argument(
-        "uni_filter_regexp", help="university to filter by"
-        )
-    parser.add_argument(
-        "dcs_app_status_stem", help="stem of name that non-rejected applications will have ``dcs application status'' gradapps field"
-        )
-
-    args = parser.parse_args()
-    return (args.fn_of_list_of_app_nums, args.uni_filter_regexp,args.dcs_app_status_stem)
+    parser.add_argument( "uni_filter_regexp", help="university to filter by" )
+    parser.add_argument( "dcs_app_status_stem",
+                        help="stem of name that non-rejected applications will have ``dcs application status'' gradapps field" )
+    parser.add_argument( "--sort", action="store_false")
+    #args = parser.parse_args()
+    #return (args.fn_of_list_of_app_nums, args.uni_filter_regexp,args.dcs_app_status_stem)
+    return parser.parse_args() # returns a namespace.
 
 def fn(n,nn):
     "concoct full path to transcript, cv, sop files in papers dir"
@@ -185,7 +183,12 @@ if __name__ == '__main__':
     #duplicate. sorta. so works on mac and windows laptops
     for dir in [TOOLS_DIR]:
         sys.path.append(dir)
-    (fn_app_num_list,uni_filter_regexp,dcs_app_status_stem) = parse_positional_args()
+        
+    ns = parse_positional_args()
+    fn_app_num_list = ns.fn_of_list_of_app_nums
+    uni_filter_regexp = ns.uni_filter_regexp
+    dcs_app_status_stem = ns.dcs_app_status_stem
+    wip_hacky_sort_flag = ns.sort
 
     completed_app_dict = completed_dict_from_applicationStatus_file(COMPLETE_FILE)
 
@@ -340,11 +343,13 @@ if __name__ == '__main__':
                 line = k + "," + str(dict[k])
                 #print(line)
                 print(line,file=new_file)
-                
-    app_num_list = sorted(app_num_list,
+
+    if wip_hacky_sort_flag:
+        app_num_list = sorted(app_num_list,
                           key=lambda app_num: extract_gpa_for_sorted(app_num_to_profile_data[app_num]),
                           reverse=True
                           )
+    
     # check for repeat prefiltering. grep for app_nums in OFN_DIR
     buf = " "
     for app_num in app_num_list:
