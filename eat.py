@@ -168,8 +168,6 @@ def parse_positional_args():
     parser.add_argument( "dcs_app_status_stem",
                         help="stem of name that non-rejected applications will have ``dcs application status'' gradapps field" )
     parser.add_argument( "--sort", action="store_false")
-    #args = parser.parse_args()
-    #return (args.fn_of_list_of_app_nums, args.uni_filter_regexp,args.dcs_app_status_stem)
     return parser.parse_args() # returns a namespace.
 
 def fn(n,nn):
@@ -184,11 +182,9 @@ if __name__ == '__main__':
     for dir in [TOOLS_DIR]:
         sys.path.append(dir)
         
-    ns = parse_positional_args()
-    fn_app_num_list = ns.fn_of_list_of_app_nums
-    uni_filter_regexp = ns.uni_filter_regexp
-    dcs_app_status_stem = ns.dcs_app_status_stem
-    wip_hacky_sort_flag = ns.sort
+    cmd_line_parm_ns = parse_positional_args()
+    fn_app_num_list = cmd_line_parm_ns.fn_of_list_of_app_nums
+    uni_filter_regexp = cmd_line_parm_ns.uni_filter_regexp
 
     completed_app_dict = completed_dict_from_applicationStatus_file(COMPLETE_FILE)
 
@@ -196,7 +192,7 @@ if __name__ == '__main__':
     now = datetime.datetime.now()
     fn_suffix = "-%s-%s-%s_%s:%s" % ( now.year, now.month, now.day, now.hour, now.minute)
     # DCS application status field of non-rejected apps will be set to this
-    dcs_app_status = dcs_app_status_stem + fn_suffix
+    dcs_app_status = cmd_line_parm_ns.dcs_app_status_stem + fn_suffix
 
     #out of control parm parsing. can do - or -123 or -"123 456"
     if fn_app_num_list.startswith('-'):
@@ -344,7 +340,7 @@ if __name__ == '__main__':
                 #print(line)
                 print(line,file=new_file)
 
-    if wip_hacky_sort_flag:
+    if cmd_line_parm_ns.sort:
         app_num_list = sorted(app_num_list,
                           key=lambda app_num: extract_gpa_for_sorted(app_num_to_profile_data[app_num]),
                           reverse=True
