@@ -166,8 +166,11 @@ def parse_positional_args():
         )
     parser.add_argument( "uni_filter_regexp", help="university to filter by" )
     parser.add_argument( "dcs_app_status_stem",
-                        help="stem of name that non-rejected applications will have ``dcs application status'' gradapps field" )
-    parser.add_argument( "--sort", action="store_false")
+                         help="stem of name that non-rejected applications will have ``dcs application status'' gradapps field" )
+    parser.add_argument( "--sort", action="store_false",
+                         help="without option menu sorted by grade. --sort leaves menu in order app_nums listed")
+    parser.add_argument( "--skip-prefiltered", action="store_true",
+                         help="without option already prefiltered applications appeard. --prefiltered leaves out already prefiltered applications")
     return parser.parse_args() # returns a namespace.
 
 def fn(n,nn):
@@ -228,6 +231,9 @@ if __name__ == '__main__':
             if not app_num in completed_app_dict.keys():
                 continue
                 print("skip", app_num, "because not complete")
+            elif cmd_line_parm_ns.skip_prefiltered and len(profile_data[GradAppsField.PREFILTER_STATUS]) > 0:
+                if VERBOSE: print("skip", app_num, "because prefilter_status already set")
+                continue
             elif not os.path.exists(transcript_fn):
                 print("skip", app_num, "because transcript does not exist",transcript_fn)
             elif not os.path.exists(sop_fn):
