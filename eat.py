@@ -98,7 +98,7 @@ class GradAppsField(IntEnum):
 def dict_from_profile_data_file(fn):
     "turn a profile.data file into a dictionary with only a few fields"
     #TODO: using a dict is ugly. I'm sure there are fancy libs to do this pretty
-    #VERBOSE = True
+    #TODO: maybe types.SimpleNamespace(**d)
     if VERBOSE: print(fn)
     with open(fn,"r") as profile_data_file:
         import re
