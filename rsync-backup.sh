@@ -15,10 +15,10 @@ then
 fi
 
 echo trying ssh $GRAD_APPS whoami
-echo if hangs you probably need to get on CSLAB vpn..
+echo whoami should return gradapps.. if hangs you probably need to start up CSLAB vpn..
 ssh $GRAD_APPS whoami
 
-echo okay then.. about exec: $CMD
+echo okay then.. next: $CMD
 read -p "hit enter to continue ... > " JUNK
 set -x
 $CMD
