@@ -9,22 +9,25 @@ def die(*objs):
 
 HOME_DIR = os.environ['HOME'] 
 if not os.path.exists(HOME_DIR): die("HOME_DIR", HOME_DIR, "does not exist")
-assert os.path.exists(HOME_DIR)
 
 TOOLS_DIR = os.path.join(HOME_DIR,"git","dcs-gradapps-prefilter")
 if not os.path.exists(TOOLS_DIR): die("TOOLS_DIR", TOOLS_DIR, "does not exist")
 
-#root of unzipped archive of gradapps files
-MSCAC_UNZIP_DIR = os.path.join(HOME_DIR,"mscac")
-if not os.path.exists(MSCAC_UNZIP_DIR): die(MSCAC_UNZIP_DIR, "does not exist")
+#where we rsync gradapps backup server to
+MSCAC_DIR = os.path.join(HOME_DIR,"mscac")
+if not os.path.exists(MSCAC_DIR): die(MSCAC_DIR, "does not exist")
 
 #dir where transcripts, sop, cv live
-MSCAC_PAPERS_DIR = os.path.join(MSCAC_UNZIP_DIR,"public_html","papers")
+MSCAC_PAPERS_DIR = os.path.join(MSCAC_DIR,"public_html","papers")
 if not os.path.exists(MSCAC_PAPERS_DIR): die(MSCAC_PAPERS_DIR, "does not exist")
 
 #dir where application dirs containing profile.data live
-MSCAC_PROFILE_DATA_ROOT_DIR = os.path.join(MSCAC_UNZIP_DIR,"public_html","data")
+MSCAC_PROFILE_DATA_ROOT_DIR = os.path.join(MSCAC_DIR,"public_html","data")
 if not os.path.exists(MSCAC_PROFILE_DATA_ROOT_DIR): die(MSCAC_PROFILE_DATA_ROOT_DIR, "does not exist")
+
+#CSV file university rankings are read from
+UNI_RANKING_CSV=os.path.join(MSCAC_DIR,"uni-ranking.csv")
+if not os.path.exists(UNI_RANKING_CSV): die(UNI_RANKING_CSV, "university ranking file does not exist")
 
 #shell script to fire up viewers on PDF files
 VIEWER = os.path.join(TOOLS_DIR,"view-files.sh")
@@ -33,9 +36,8 @@ if not os.path.exists(VIEWER): die(VIEWER, "does not exist")
 GREP_SGS_NUM = os.path.join(TOOLS_DIR,"grep-sgs-num.sh")
 if not os.path.exists(GREP_SGS_NUM): die(GREP_SGS_NUM, "does not exist")
     
-
 #file listing which apps are complete
-COMPLETE_FILE = os.path.join(MSCAC_UNZIP_DIR,"public_html/admin/applicationStatus")
+COMPLETE_FILE = os.path.join(MSCAC_DIR,"public_html/admin/applicationStatus")
 if not os.path.exists(COMPLETE_FILE): die(COMPLETE_FILE, "does not exist")
 
 VERBOSE = False
@@ -61,6 +63,21 @@ def parse_rhs_profile_data_line(line):
         print("failed to split = on ", line)
         exit(3)
     return rhs.strip().translate(translation_table_to_delete_chars)
+
+
+def uni_ranking_dict_from_csv_file(fn,has_header):
+    "reads csv file mapping university name to ranking"
+    import functools, csv
+    #example line in CSV file:
+    #UNIV OF TORONTO,1,top rank (canada),Canada,
+    with open(fn) as csv_file:
+        csv_file_reader = csv.reader(csv_file, delimiter=',', quotechar='"',dialect=csv.excel_tab)
+        if has_header:
+            next(csv_file_reader)
+        def acc(d, fields):
+            d[fields[0]] = fields[1] 
+            return d
+        return  functools.reduce(acc, csv_file_reader, {})
 
 
 def completed_dict_from_applicationStatus_file(fn):
@@ -157,13 +174,11 @@ def parse_positional_args():
     "parse the command line parameters of this program"
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "fn_of_list_of_app_nums",
+    parser.add_argument("fn_of_list_of_app_nums", 
         help="""likely fn containing find . -name profile.data | sed for numbers.
         See find-profile-data-app-numbers.sh
         Note if fn given is -NNN it means app_number NNN, if just - prompts for number        
-        """
-        )
+        """ )
     parser.add_argument( "uni_filter_regexp", help="university to filter by" )
     parser.add_argument( "dcs_app_status_stem",
                          help="stem of name that non-rejected applications will have ``dcs application status'' gradapps field" )
@@ -177,10 +192,18 @@ def fn(n,nn):
     "concoct full path to transcript, cv, sop files in papers dir"
     return os.path.join(MSCAC_PAPERS_DIR, str(n), "file" + n + "-" + str(nn) + ".pdf")
 
+def shorten_uni_name(uni_name):
+    "take a few common substrings out"
+    n = uni_name.replace("UNIVERSITY","").replace("UNIV","").replace("university","").replace("University","")
+    n = n.replace("INST","").replace("INSTITUTE","").replace("Institute","").replace("institute","")
+    n = n.replace("INST","").replace("INSTITUTION","").replace("Institution","").replace("institution","")
+    n = n.replace(" of","").replace(" OF","")
+    n = n.replace("Science","Sci").replace("science","sci")
+    n = n.replace("Technology","Tech").replace("technology","tech")
+    return n
+    
 if __name__ == '__main__': 
-    import sys
-    import os
-    import re
+    import sys,os,re,functools
     #duplicate. sorta. so works on mac and windows laptops
     for dir in [TOOLS_DIR]:
         sys.path.append(dir)
@@ -189,6 +212,12 @@ if __name__ == '__main__':
     fn_app_num_list = cmd_line_parm_ns.fn_of_list_of_app_nums
     uni_filter_regexp = cmd_line_parm_ns.uni_filter_regexp
 
+    #read csv file ranking universities
+    uni_ranking = uni_ranking_dict_from_csv_file(UNI_RANKING_CSV,has_header=False)
+    # for uni_name in uni_ranking.keys():
+    #     print(shorten_uni_name(uni_name))
+    # exit(0)
+    
     completed_app_dict = completed_dict_from_applicationStatus_file(COMPLETE_FILE)
 
     import datetime
@@ -275,9 +304,27 @@ if __name__ == '__main__':
         gpa3 = extract_gpa(profile_data, GradAppsField.UNI_3,GradAppsField.OVERALL_AVG_3)
         if gpa3:
             return gpa3
-        
         return None
-        
+
+    def extract_uni(profile_data, u_field_name):
+        "WIP "
+        if not u_field_name in profile_data.keys():
+            return None
+        return profile_data[u_field_name]
+    
+    def extract_uni_name_from_multiple_fields(profile_data):
+        #TODO: make this into map
+        uni1 = extract_uni(profile_data, GradAppsField.UNI_1)
+        if uni1:
+            return uni1
+        uni2 = extract_uni(profile_data, GradAppsField.UNI_2)
+        if uni2:
+            return uni2
+        uni3 = extract_uni(profile_data, GradAppsField.UNI_3)
+        if uni3:
+            return uni3
+        return "-"
+    
     #try and sort app_num_list by GPA
     def extract_gpa_for_sorted(profile_data):
         gpa = extract_gpa_from_multiple_fields(profile_data)
@@ -390,6 +437,22 @@ if __name__ == '__main__':
             print("..eof..")
             return None
 
+    #here
+    def status_field(profile_data):
+        "pull the status field out"
+        uni_name = extract_uni_name_from_multiple_fields(profile_data)
+        try:
+            ranking = int(uni_ranking[uni_name])
+        except:
+            ranking = 1001
+        gpa = extract_gpa_from_multiple_fields(profile_data)
+        if gpa == None:
+            gpa = 0.0
+        status = "%s-%03d-%.1f-%s-%02d" % (shorten_uni_name(uni_name),ranking, gpa,dcs_app_status, dcs_status_map_ix)
+        print("status_field", status)
+        return status
+
+
 
     from menu import PrefilterMenu
 
@@ -450,9 +513,11 @@ if __name__ == '__main__':
         resp = ""
         while True:
             print("choose dcs prefilter status for application >>>",app_num,"<<< from menu below")
+            profile_data = app_num_to_profile_data[app_num]
                         
             ########## menu for actual decision 
-            prompt = "%s)% 5.2f enter a letter > " % (str(app_num), extract_gpa_for_sorted(app_num_to_profile_data[app_num]))
+            #prompt = "%s)% 5.2f enter a letter > " % (str(app_num), extract_gpa_for_sorted(app_num_to_profile_data[app_num]))
+            prompt = "%s)%20s enter a letter > " % (str(app_num), status_field(profile_data))
             menu = PrefilterMenu(response_code_list, menu_line_dict , prompt)
             
             resp = menu.menu()
@@ -471,16 +536,14 @@ if __name__ == '__main__':
                 print("gotta choose something here. looping back to same application")
                 continue
 
-            try:
-                profile_data = app_num_to_profile_data[app_num]
+            try:                    
                 decisions[profile_data[GradAppsField.SGS_NUM]] = gradapps_response
                 #TODO: fix this searching through string value for state
                 if re.search("Reject", gradapps_response):
                     print("skip adding", app_num, "to dcs_status_map because rejected")
                 else:
-                    status = "%s-%02d" % (dcs_app_status, dcs_status_map_ix)
-                    dcs_status_map[profile_data[GradAppsField.SGS_NUM]] = status
-                    write_to_new_file(dcs_app_status_stem,BFN, dcs_status_map)
+                    dcs_status_map[profile_data[GradAppsField.SGS_NUM]] = status_field(profile_data)
+                    write_to_new_file(dcs_app_status,BFN, dcs_status_map)
                     dcs_status_map_ix += 1
                                 
                 ########## paranoidly, write every time
