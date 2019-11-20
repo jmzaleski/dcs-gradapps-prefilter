@@ -40,8 +40,6 @@ if not os.path.exists(GREP_SGS_NUM): die(GREP_SGS_NUM, "does not exist")
 COMPLETE_FILE = os.path.join(MSCAC_DIR,"public_html/admin/applicationStatus")
 if not os.path.exists(COMPLETE_FILE): die(COMPLETE_FILE, "does not exist")
 
-VERBOSE = False
-
 #output file directory
 MSCAC_PREFILTER_DIR_NAME = "mscac-prefilter"
 OFN_DIR=os.path.join(HOME_DIR,MSCAC_PREFILTER_DIR_NAME)
@@ -250,7 +248,7 @@ if __name__ == '__main__':
     for app_num in app_num_to_profile_data.keys():
         profile_data = app_num_to_profile_data[app_num]
         institution = profile_data[GradAppsField.DCS_UNION_INSTITUTION]
-        if VERBOSE: print(uni_filter_regexp, institution)
+        if VERBOSE: print("institution",uni_filter_regexp, institution)
         if not re.search(uni_filter_regexp, institution):
             if VERBOSE: print("skip", app_num, "because", institution, "not matched by", uni_filter_regexp)
         else:
@@ -258,8 +256,8 @@ if __name__ == '__main__':
             cv_fn =  fn(app_num,2)
             transcript_fn =  fn(app_num,3)
             if not app_num in completed_app_dict.keys():
+                if VERBOSE:print("skip", app_num, "because not complete")
                 continue
-                print("skip", app_num, "because not complete")
             elif cmd_line_parm_ns.skip_prefiltered and len(profile_data[GradAppsField.PREFILTER_STATUS]) > 0:
                 if VERBOSE: print("skip", app_num, "because prefilter_status already set")
                 continue
@@ -448,7 +446,9 @@ if __name__ == '__main__':
         gpa = extract_gpa_from_multiple_fields(profile_data)
         if gpa == None:
             gpa = 0.0
-        status = "%s-%03d-%.1f-%s-%02d" % (shorten_uni_name(uni_name),ranking, gpa,dcs_app_status, dcs_status_map_ix)
+        status = "%s %s-%03d-%.1f-%s-%02d" % (profile_data[GradAppsField.GENDER],
+                                              shorten_uni_name(uni_name),
+                                              ranking, gpa, dcs_app_status, dcs_status_map_ix)
         print("status_field", status)
         return status
 
