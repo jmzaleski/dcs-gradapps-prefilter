@@ -304,15 +304,17 @@ def write_to_new_file(header_line, fn,dict):
     """write all lines out to a new file name"""
     #TODO: use csv.writer ?
     #TODO: rename new_csv_file
+    print("write_to_new_file:",fn,dict)
     if os.path.exists(fn):
         os.system("mv %s %s" % (fn, "/tmp"))
-        #print("existing %s moved to /tmp" % fn)
-        with open(fn,'w') as new_file:
-            print(header_line,file=new_file)
-            for k in dict.keys():
-                line = k + "," + str(dict[k])
-                #print(line)
-                print(line,file=new_file)
+        print("existing %s moved to /tmp" % fn)
+    with open(fn,'w') as new_file:
+        print(header_line,file=new_file)
+        for k in dict.keys():
+            line = k + "," + str(dict[k])
+            #print(line)
+            print("write_to_new_file:",line)
+            print(line,file=new_file)
 
 
 def read_query_from_input(prompt):
@@ -337,26 +339,26 @@ def prefilter_status_field(profile_data):
     gpa = extract_gpa_from_multiple_fields(profile_data)
     if gpa == None:
         gpa = 0.0
-        status = "%s-%.1f" % (shorten_uni_name(uni_name),gpa)
-        print("prefilter_status_field", status)
-        return status
+    status = "%s-%.1f" % (shorten_uni_name(uni_name),gpa)
+    print("prefilter_status_field", status)
+    return status
 
-    def prefilter_prompt(app_num,profile_data,ix,n):
-        "prompt line with a bunch of very compressed info. gender, school, rank, gpa "
-        #TODO: any need for this any more?
-        uni_name = extract_uni_name_from_multiple_fields(profile_data)
-        try:
-            ranking = int(uni_ranking[uni_name])
-        except:
-            ranking = 1001
-            gpa = extract_gpa_from_multiple_fields(profile_data)
-            if gpa == None:
-                gpa = 0.0
-                prompt = "%d)%d/%d %s %s-%03d-%.1f-%s" % (app_num, ix, n, profile_data[GradAppsField.GENDER],
-                                                              shorten_uni_name(uni_name),
-                                                              ranking, gpa, dcs_app_status)
-                print("prompt", prompt)
-                return prompt
+def prefilter_prompt(app_num,profile_data,ix,n):
+    "prompt line with a bunch of very compressed info. gender, school, rank, gpa "
+    #TODO: any need for this any more?
+    uni_name = extract_uni_name_from_multiple_fields(profile_data)
+    try:
+        ranking = int(uni_ranking[uni_name])
+    except:
+        ranking = 1001
+    gpa = extract_gpa_from_multiple_fields(profile_data)
+    if gpa == None:
+        gpa = 0.0
+    prompt = "%d)%d/%d %s %s-%03d-%.1f" % (app_num, ix, n, profile_data[GradAppsField.GENDER],
+                                                  shorten_uni_name(uni_name),
+                                                  ranking, gpa)
+    #print("prompt", prompt)
+    return prompt
 
 if __name__ == '__main__': 
     import sys,os,re,functools
@@ -492,7 +494,7 @@ if __name__ == '__main__':
     s = str(uuid.uuid4())
     OFN_basename = "dcs-prefilter-" + s + ".csv"
     OFN = os.path.join(OFN_DIR,OFN_basename)
-    BFN_basename = dcs_app_status + s + ".csv"
+    BFN_basename = "dcs-app-status-"+ s + ".csv"
     BFN = os.path.join(OFN_DIR,BFN_basename)
     if os.path.exists(BFN):
         die("Sorry, " + BFN_basename + " file already exists")
@@ -549,7 +551,7 @@ if __name__ == '__main__':
                     print("skip adding", app_num, "to dcs_status_map because rejected")
                 else:
                     dcs_status_map[profile_data[GradAppsField.SGS_NUM]] = prefilter_status_field(profile_data)
-                    write_to_new_file(dcs_app_status,BFN, dcs_status_map)
+                    write_to_new_file("dcs app status",BFN, dcs_status_map)
                     dcs_status_map_ix += 1
                                 
                 ########## paranoidly, write every time
