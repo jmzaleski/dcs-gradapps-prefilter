@@ -370,9 +370,6 @@ if __name__ == '__main__':
 
     #read csv file ranking universities
     uni_ranking = uni_ranking_dict_from_csv_file(UNI_RANKING_CSV,has_header=False)
-    # for uni_name in uni_ranking.keys():
-    #     print(shorten_uni_name(uni_name))
-    # exit(0)
     
     completed_app_dict = completed_dict_from_applicationStatus_file(COMPLETE_FILE)
 
@@ -401,7 +398,9 @@ if __name__ == '__main__':
 
     if VERBOSE: print("app_num_to_profile_data",app_num_to_profile_data)
 
-    #TODO this re-sorts by GPA. bug? maybe should leave sort by app_num_list as above
+    # this is the spot to batch hacks on all the data..
+    
+    # now that have read all the data, filter per command line options into app_num_list
     app_num_list = []
     for app_num in app_num_to_profile_data.keys():
         profile_data = app_num_to_profile_data[app_num]
@@ -431,6 +430,7 @@ if __name__ == '__main__':
 
 
     if cmd_line_parm_ns.sort:
+        #TODO this re-sorts by GPA. bug? maybe should leave sort by app_num_list as above
         app_num_list = sorted(app_num_list,
                           key=lambda app_num: extract_gpa_for_sorted(app_num_to_profile_data[app_num]),
                           reverse=True
