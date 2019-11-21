@@ -86,6 +86,7 @@ def completed_dict_from_applicationStatus_file(fn):
         for line in apf:
             fields = line.split(" ")
             assert len(fields) == 2
+            #TODO: re.compile ?
             if re.search("complete",fields[1]):
                 map[fields[0]] = True
             else:
@@ -94,7 +95,7 @@ def completed_dict_from_applicationStatus_file(fn):
 
 from enum import IntEnum
 class GradAppsField(IntEnum):
-    "enum reverse engineering internal gradapps data fields"
+    "enum records reverse engineering of internal gradapps data fields"
     # danger this depends on knowledge of internal gradapps data layout
     UNI_1   = 29       # in UI: Academic History: University 1 Name and Location
     UNI_2   = 87
@@ -114,6 +115,7 @@ def dict_from_profile_data_file(fn):
     "turn a profile.data file into a dictionary with only a few fields"
     #TODO: using a dict is ugly. I'm sure there are fancy libs to do this pretty
     #TODO: maybe types.SimpleNamespace(**d)
+    #TODO: maybe csv.DictReader ?
     if VERBOSE: print(fn)
     with open(fn,"r") as profile_data_file:
         import re
@@ -125,17 +127,6 @@ def dict_from_profile_data_file(fn):
                     rec[gf] = rhs
                     if VERBOSE: print("line: ", line.strip(),"matches:",gf,rhs)
         return rec
-
-def parse_dir_path_for_app_number(path):
-    "we grub out the app number by cracking open the dir path to the profile.data file"
-    try:
-        l = path.split("public_html/data")
-        d = l[1].split("/")
-        app_num = d[1]
-        return  app_num
-    except:
-        print("failed: split on public_html/data of ", path)
-        exit(3)
 
 def concoct_profile_data_file_name_from_app_number(app_num):
     """concoct full path of profile.data file from app_num.
@@ -224,7 +215,7 @@ if __name__ == '__main__':
     # DCS application status field of non-rejected apps will be set to this
     dcs_app_status = cmd_line_parm_ns.dcs_app_status_stem + fn_suffix
 
-    #out of control parm parsing. can do - or -123 or -"123 456"
+    #TODO: out of control parm parsing. can do - or -123 or -"123 456"
     if fn_app_num_list.startswith('-'):
         if len(fn_app_num_list)>1:
             fields = fn_app_num_list[1:].split(" ")
@@ -249,6 +240,7 @@ if __name__ == '__main__':
         profile_data = app_num_to_profile_data[app_num]
         institution = profile_data[GradAppsField.DCS_UNION_INSTITUTION]
         if VERBOSE: print("institution",uni_filter_regexp, institution)
+        #TODO: re.compile ?
         if not re.search(uni_filter_regexp, institution):
             if VERBOSE: print("skip", app_num, "because", institution, "not matched by", uni_filter_regexp)
         else:
@@ -380,6 +372,7 @@ if __name__ == '__main__':
         
     def write_to_new_file(header_line, fn,dict):
         """write all lines out to a new file name"""
+        #TODO: use csv.writer ?
         #TODO: rename new_csv_file
         if os.path.exists(fn):
             os.system("mv %s %s" % (fn, "/tmp"))
@@ -436,8 +429,19 @@ if __name__ == '__main__':
             return None
 
     #here
-    def status_field(profile_data):
-        "pull the status field out"
+    def prefilter_status_field(profile_data):
+        "the prefileter status field we will set for the application has school and gpa"
+        uni_name = extract_uni_name_from_multiple_fields(profile_data)
+        gpa = extract_gpa_from_multiple_fields(profile_data)
+        if gpa == None:
+            gpa = 0.0
+        status = "%s-%.1f" % (shorten_uni_name(uni_name),gpa)
+        print("prefilter_status_field", status)
+        return status
+
+    def prefilter_prompt(app_num,profile_data,ix,n):
+        "prompt line with a bunch of very compressed info. gender, school, rank, gpa "
+        #TODO: any need for this any more?
         uni_name = extract_uni_name_from_multiple_fields(profile_data)
         try:
             ranking = int(uni_ranking[uni_name])
@@ -446,12 +450,12 @@ if __name__ == '__main__':
         gpa = extract_gpa_from_multiple_fields(profile_data)
         if gpa == None:
             gpa = 0.0
-        status = "%s %s-%03d-%.1f-%s-%02d" % (profile_data[GradAppsField.GENDER],
+        prompt = "%d)%d/%d %s %s-%03d-%.1f-%s" % (app_num, ix, n, profile_data[GradAppsField.GENDER],
                                               shorten_uni_name(uni_name),
-                                              ranking, gpa, dcs_app_status, dcs_status_map_ix)
-        print("status_field", status)
-        return status
-
+                                              ranking, gpa, dcs_app_status)
+        print("prompt", prompt)
+        return prompt
+    
 
 
     from menu import PrefilterMenu
@@ -481,7 +485,6 @@ if __name__ == '__main__':
                            'z' : "NCS-Star",
                         }
     
-
     import uuid #universal unique resource naming thingy
     s = str(uuid.uuid4())
     OFN_basename = "dcs-prefilter-" + s + ".csv"
@@ -517,7 +520,9 @@ if __name__ == '__main__':
                         
             ########## menu for actual decision 
             #prompt = "%s)% 5.2f enter a letter > " % (str(app_num), extract_gpa_for_sorted(app_num_to_profile_data[app_num]))
-            prompt = "%s)%20s enter a letter > " % (str(app_num), status_field(profile_data))
+            #prompt = "%s)%20s enter a letter > " % ( str(app_num), prefilter_prompt(profile_data,dcs_status_map_ix,len(app_num_list)))
+            prompt = "%s enter a letter > " % (
+                prefilter_prompt(int(app_num), profile_data, dcs_status_map_ix, len(app_num_list)) )
             menu = PrefilterMenu(response_code_list, menu_line_dict , prompt)
             
             resp = menu.menu()
@@ -542,7 +547,7 @@ if __name__ == '__main__':
                 if re.search("Reject", gradapps_response):
                     print("skip adding", app_num, "to dcs_status_map because rejected")
                 else:
-                    dcs_status_map[profile_data[GradAppsField.SGS_NUM]] = status_field(profile_data)
+                    dcs_status_map[profile_data[GradAppsField.SGS_NUM]] = prefilter_status_field(profile_data)
                     write_to_new_file(dcs_app_status,BFN, dcs_status_map)
                     dcs_status_map_ix += 1
                                 
