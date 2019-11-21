@@ -191,6 +191,173 @@ def shorten_uni_name(uni_name):
     n = n.replace("Technology","Tech").replace("technology","tech")
     return n
     
+
+def extract_gpa(profile_data, u_field_name,gpa_field_name):
+    "WIP extract gpa from text field attempting to work around common applicant mistakes"
+    if not u_field_name in profile_data.keys():
+        return None
+    uni = profile_data[u_field_name]
+    # if not re.search(uni_filter_regexp, uni): 
+    #     return None
+    if not gpa_field_name in profile_data:
+        return None
+    gpa_str = profile_data[gpa_field_name]
+    try:
+        return float(gpa_str)
+    except:
+        #some students take it into their heads to enter "3.999/4", or "89% (first class honours)"
+        fields = re.compile("[%/]").split(gpa_str)
+        if len(fields) == 2:
+            try:
+                return float(fields[0])
+            except:
+                return None
+            return None
+
+def extract_gpa_from_multiple_fields(profile_data):
+    gpa1 = extract_gpa(profile_data, GradAppsField.UNI_1,GradAppsField.OVERALL_AVG_1)
+    if gpa1:
+        return gpa1
+    gpa2 = extract_gpa(profile_data, GradAppsField.UNI_2,GradAppsField.OVERALL_AVG_2)
+    if gpa2:
+        return gpa2
+    gpa3 = extract_gpa(profile_data, GradAppsField.UNI_3,GradAppsField.OVERALL_AVG_3)
+    if gpa3:
+        return gpa3
+    return None
+
+def extract_uni(profile_data, u_field_name):
+    "WIP "
+    if not u_field_name in profile_data.keys():
+        return None
+    return profile_data[u_field_name]
+    
+def extract_uni_name_from_multiple_fields(profile_data):
+    #TODO: make this into map
+    uni1 = extract_uni(profile_data, GradAppsField.UNI_1)
+    if uni1:
+        return uni1
+    uni2 = extract_uni(profile_data, GradAppsField.UNI_2)
+    if uni2:
+        return uni2
+    uni3 = extract_uni(profile_data, GradAppsField.UNI_3)
+    if uni3:
+        return uni3
+    return "-"
+    
+#try and sort app_num_list by GPA
+def extract_gpa_for_sorted(profile_data):
+    gpa = extract_gpa_from_multiple_fields(profile_data)
+    if gpa:
+        return gpa
+    else:
+        print("grade field parsing failed, using zero")
+        return 0.0
+
+    
+# warning, this depends on secret knowledge of gradapps status codes
+# (the int values depend on the order of some radio button that Lloyd set up)
+# TODO: build this from enum
+prefilter_status_map = {
+    1: "Reject",
+    2: "Pass-Star",
+    3: "Pass-VGE",
+    4: "NCS-Reject",
+    5: "NCS-Pass",
+    6: "Pass-Unsure",
+    7: "Pass-Good",
+    8: "NCS-Star",
+    }
+def extract_prefilter_status(profile_data):
+    "map the prefilter status value extracted from gradapps to its string name"
+    try:
+        return prefilter_status_map[int(profile_data[GradAppsField.PREFILTER_STATUS])]
+    except:
+        return "-"
+
+def pretty_print_app_list(app_num_to_profile_data_dict,num_list,file_whatsit,after_map):
+    "print the list of applicants to filter, or just after filtering"
+    # TODO: figure out better way to do nasty after_map thing (needed to reuse this code to pretty print after menu)
+    print("\n\n===============================\nAPPS matching: ",uni_filter_regexp)
+    for app_num in num_list:
+        profile_data = app_num_to_profile_data_dict[app_num]
+        if after_map:
+            sgs_num = profile_data[GradAppsField.SGS_NUM]
+            if sgs_num in after_map:
+                prefilter_status = after_map[profile_data[GradAppsField.SGS_NUM]]
+            else:
+                prefilter_status = "Skip" #skipped making decision, so nothing in map
+        else:
+            prefilter_status = extract_prefilter_status(profile_data)
+            print(app_num,
+                      profile_data[GradAppsField.GENDER],
+                      "%11s"   % prefilter_status,
+                      "%5.1f" % extract_gpa_for_sorted(profile_data),
+                      profile_data[GradAppsField.SGS_NUM],
+                      profile_data[GradAppsField.DCS_UNION_INSTITUTION].rstrip('|'),
+                      file=file_whatsit
+                      )
+            
+        print("===============================\n")
+        
+def write_to_new_file(header_line, fn,dict):
+    """write all lines out to a new file name"""
+    #TODO: use csv.writer ?
+    #TODO: rename new_csv_file
+    if os.path.exists(fn):
+        os.system("mv %s %s" % (fn, "/tmp"))
+        #print("existing %s moved to /tmp" % fn)
+        with open(fn,'w') as new_file:
+            print(header_line,file=new_file)
+            for k in dict.keys():
+                line = k + "," + str(dict[k])
+                #print(line)
+                print(line,file=new_file)
+
+
+def read_query_from_input(prompt):
+    "UI read a line from stdin"
+    try:
+        # readline will do completion on utorid's but can enter any string from grade file too
+        query_string = input(prompt)
+        if len(query_string) == 0:
+            return None
+        else:
+            return query_string
+    except KeyboardInterrupt:
+        print("..keyboard interrupt..")
+        return '' #empty string
+    except EOFError:
+        print("..eof..")
+        return None
+
+def prefilter_status_field(profile_data):
+    "the prefileter status field we will set for the application has school and gpa"
+    uni_name = extract_uni_name_from_multiple_fields(profile_data)
+    gpa = extract_gpa_from_multiple_fields(profile_data)
+    if gpa == None:
+        gpa = 0.0
+        status = "%s-%.1f" % (shorten_uni_name(uni_name),gpa)
+        print("prefilter_status_field", status)
+        return status
+
+    def prefilter_prompt(app_num,profile_data,ix,n):
+        "prompt line with a bunch of very compressed info. gender, school, rank, gpa "
+        #TODO: any need for this any more?
+        uni_name = extract_uni_name_from_multiple_fields(profile_data)
+        try:
+            ranking = int(uni_ranking[uni_name])
+        except:
+            ranking = 1001
+            gpa = extract_gpa_from_multiple_fields(profile_data)
+            if gpa == None:
+                gpa = 0.0
+                prompt = "%d)%d/%d %s %s-%03d-%.1f-%s" % (app_num, ix, n, profile_data[GradAppsField.GENDER],
+                                                              shorten_uni_name(uni_name),
+                                                              ranking, gpa, dcs_app_status)
+                print("prompt", prompt)
+                return prompt
+
 if __name__ == '__main__': 
     import sys,os,re,functools
     #duplicate. sorta. so works on mac and windows laptops
@@ -262,127 +429,6 @@ if __name__ == '__main__':
             else:
                 app_num_list.append(app_num)
 
-    def extract_gpa(profile_data, u_field_name,gpa_field_name):
-        "WIP extract gpa from text field attempting to work around common applicant mistakes"
-        if not u_field_name in profile_data.keys():
-            return None
-        uni = profile_data[u_field_name]
-        # if not re.search(uni_filter_regexp, uni): 
-        #     return None
-        if not gpa_field_name in profile_data:
-            return None
-        gpa_str = profile_data[gpa_field_name]
-        try:
-            return float(gpa_str)
-        except:
-            #some students take it into their heads to enter "3.999/4", or "89% (first class honours)"
-            fields = re.compile("[%/]").split(gpa_str)
-            if len(fields) == 2:
-                try:
-                    return float(fields[0])
-                except:
-                    return None
-        return None
-
-    def extract_gpa_from_multiple_fields(profile_data):
-        gpa1 = extract_gpa(profile_data, GradAppsField.UNI_1,GradAppsField.OVERALL_AVG_1)
-        if gpa1:
-            return gpa1
-        gpa2 = extract_gpa(profile_data, GradAppsField.UNI_2,GradAppsField.OVERALL_AVG_2)
-        if gpa2:
-            return gpa2
-        gpa3 = extract_gpa(profile_data, GradAppsField.UNI_3,GradAppsField.OVERALL_AVG_3)
-        if gpa3:
-            return gpa3
-        return None
-
-    def extract_uni(profile_data, u_field_name):
-        "WIP "
-        if not u_field_name in profile_data.keys():
-            return None
-        return profile_data[u_field_name]
-    
-    def extract_uni_name_from_multiple_fields(profile_data):
-        #TODO: make this into map
-        uni1 = extract_uni(profile_data, GradAppsField.UNI_1)
-        if uni1:
-            return uni1
-        uni2 = extract_uni(profile_data, GradAppsField.UNI_2)
-        if uni2:
-            return uni2
-        uni3 = extract_uni(profile_data, GradAppsField.UNI_3)
-        if uni3:
-            return uni3
-        return "-"
-    
-    #try and sort app_num_list by GPA
-    def extract_gpa_for_sorted(profile_data):
-        gpa = extract_gpa_from_multiple_fields(profile_data)
-        if gpa:
-            return gpa
-        else:
-            print("grade field parsing failed, using zero")
-            return 0.0
-
-    # warning, this depends on secret knowledge of gradapps status codes
-    # (the int values depend on the order of some radio button that Lloyd set up)
-    # TODO: build this from enum
-    prefilter_status_map = {
-        1: "Reject",
-        2: "Pass-Star",
-        3: "Pass-VGE",
-        4: "NCS-Reject",
-        5: "NCS-Pass",
-        6: "Pass-Unsure",
-        7: "Pass-Good",
-        8: "NCS-Star",
-        }
-        
-    def extract_prefilter_status(profile_data):
-        "map the prefilter status value extracted from gradapps to its string name"
-        try:
-            return prefilter_status_map[int(profile_data[GradAppsField.PREFILTER_STATUS])]
-        except:
-            return "-"
-
-    def pretty_print_app_list(app_num_to_profile_data_dict,num_list,file_whatsit,after_map):
-        "print the list of applicants to filter, or just after filtering"
-        # TODO: figure out better way to do nasty after_map thing (needed to reuse this code to pretty print after menu)
-        print("\n\n===============================\nAPPS matching: ",uni_filter_regexp)
-        for app_num in num_list:
-            profile_data = app_num_to_profile_data_dict[app_num]
-            if after_map:
-                sgs_num = profile_data[GradAppsField.SGS_NUM]
-                if sgs_num in after_map:
-                    prefilter_status = after_map[profile_data[GradAppsField.SGS_NUM]]
-                else:
-                    prefilter_status = "Skip" #skipped making decision, so nothing in map
-            else:
-                prefilter_status = extract_prefilter_status(profile_data)
-            print(app_num,
-                      profile_data[GradAppsField.GENDER],
-                      "%11s"   % prefilter_status,
-                      "%5.1f" % extract_gpa_for_sorted(profile_data),
-                      profile_data[GradAppsField.SGS_NUM],
-                      profile_data[GradAppsField.DCS_UNION_INSTITUTION].rstrip('|'),
-                      file=file_whatsit
-                      )
-            
-        print("===============================\n")
-        
-    def write_to_new_file(header_line, fn,dict):
-        """write all lines out to a new file name"""
-        #TODO: use csv.writer ?
-        #TODO: rename new_csv_file
-        if os.path.exists(fn):
-            os.system("mv %s %s" % (fn, "/tmp"))
-        #print("existing %s moved to /tmp" % fn)
-        with open(fn,'w') as new_file:
-            print(header_line,file=new_file)
-            for k in dict.keys():
-                line = k + "," + str(dict[k])
-                #print(line)
-                print(line,file=new_file)
 
     if cmd_line_parm_ns.sort:
         app_num_list = sorted(app_num_list,
@@ -412,49 +458,6 @@ if __name__ == '__main__':
     if response == None or (len(response) > 0 and not response.lower().startswith("y")):
         die("actually entering any char bails out.. only hitting enter alone continues.. :)")
 
-    def read_query_from_input(prompt):
-        "UI read a line from stdin"
-        try:
-            # readline will do completion on utorid's but can enter any string from grade file too
-            query_string = input(prompt)
-            if len(query_string) == 0:
-                return None
-            else:
-                return query_string
-        except KeyboardInterrupt:
-            print("..keyboard interrupt..")
-            return '' #empty string
-        except EOFError:
-            print("..eof..")
-            return None
-
-    #here
-    def prefilter_status_field(profile_data):
-        "the prefileter status field we will set for the application has school and gpa"
-        uni_name = extract_uni_name_from_multiple_fields(profile_data)
-        gpa = extract_gpa_from_multiple_fields(profile_data)
-        if gpa == None:
-            gpa = 0.0
-        status = "%s-%.1f" % (shorten_uni_name(uni_name),gpa)
-        print("prefilter_status_field", status)
-        return status
-
-    def prefilter_prompt(app_num,profile_data,ix,n):
-        "prompt line with a bunch of very compressed info. gender, school, rank, gpa "
-        #TODO: any need for this any more?
-        uni_name = extract_uni_name_from_multiple_fields(profile_data)
-        try:
-            ranking = int(uni_ranking[uni_name])
-        except:
-            ranking = 1001
-        gpa = extract_gpa_from_multiple_fields(profile_data)
-        if gpa == None:
-            gpa = 0.0
-        prompt = "%d)%d/%d %s %s-%03d-%.1f-%s" % (app_num, ix, n, profile_data[GradAppsField.GENDER],
-                                              shorten_uni_name(uni_name),
-                                              ranking, gpa, dcs_app_status)
-        print("prompt", prompt)
-        return prompt
     
 
 
@@ -519,8 +522,6 @@ if __name__ == '__main__':
             profile_data = app_num_to_profile_data[app_num]
                         
             ########## menu for actual decision 
-            #prompt = "%s)% 5.2f enter a letter > " % (str(app_num), extract_gpa_for_sorted(app_num_to_profile_data[app_num]))
-            #prompt = "%s)%20s enter a letter > " % ( str(app_num), prefilter_prompt(profile_data,dcs_status_map_ix,len(app_num_list)))
             prompt = "%s enter a letter > " % (
                 prefilter_prompt(int(app_num), profile_data, dcs_status_map_ix, len(app_num_list)) )
             menu = PrefilterMenu(response_code_list, menu_line_dict , prompt)
