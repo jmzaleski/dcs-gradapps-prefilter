@@ -164,7 +164,7 @@ def parse_positional_args():
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("fn_of_list_of_app_nums", 
-        help="""likely fn containing find . -name profile.data | sed for numbers.
+                        help="""likely fn containing find . -name profile.data | sed for numbers.
         See find-profile-data-app-numbers.sh
         Note if fn given is -NNN it means app_number NNN, if just - prompts for number        
         """ )
@@ -189,6 +189,9 @@ def shorten_uni_name(uni_name):
     n = n.replace(" of","").replace(" OF","")
     n = n.replace("Science","Sci").replace("science","sci")
     n = n.replace("Technology","Tech").replace("technology","tech")
+    n = n.lstrip(" ")
+    n = n.rstrip(" ")
+    n = n.replace(" ","_")
     return n
     
 
@@ -334,13 +337,12 @@ def read_query_from_input(prompt):
         return None
 
 def prefilter_status_field(profile_data):
-    "the prefileter status field we will set for the application has school and gpa"
+    "the prefilter status field we will set for the application has school and gpa"
     uni_name = extract_uni_name_from_multiple_fields(profile_data)
     gpa = extract_gpa_from_multiple_fields(profile_data)
     if gpa == None:
         gpa = 0.0
     status = "%s-%.1f" % (shorten_uni_name(uni_name),gpa)
-    print("prefilter_status_field", status)
     return status
 
 def prefilter_prompt(app_num,profile_data,ix,n):
@@ -359,6 +361,35 @@ def prefilter_prompt(app_num,profile_data,ix,n):
                                                   ranking, gpa)
     #print("prompt", prompt)
     return prompt
+
+def  batch_hack(app_num_to_profile_data, completed_app_dict):
+    "this printed out a csv file which we used to clean up the dcs application status fields"
+    app_num_list = []
+    for app_num in app_num_to_profile_data.keys():
+        profile_data = app_num_to_profile_data[app_num]
+        institution = profile_data[GradAppsField.DCS_UNION_INSTITUTION]
+        if VERBOSE: print("institution",uni_filter_regexp, institution)
+        if not app_num in completed_app_dict.keys():
+            if VERBOSE:print("skip", app_num, "because not complete")
+            continue
+        elif len(profile_data[GradAppsField.PREFILTER_STATUS]) == 0:
+            if VERBOSE: print("skip", app_num, "because prefilter_status not set")
+            continue
+        app_num_list.append(app_num)
+    #print(app_num_list)
+    #print(prefilter_status_map[1])
+    for app_num in app_num_list:
+        profile_data = app_num_to_profile_data[app_num]
+        prefilter_dec = int(profile_data[GradAppsField.PREFILTER_STATUS])
+        if prefilter_dec == 1 or prefilter_dec == 4:
+            continue #skip reject
+        sgs_num = profile_data[GradAppsField.SGS_NUM]
+        #print(sgs_num, prefilter_status_map[prefilter_dec],prefilter_status_field(profile_data))
+        print("%s,%s" % (sgs_num, prefilter_status_field(profile_data)))
+        
+    exit(0)
+    
+
 
 if __name__ == '__main__': 
     import sys,os,re,functools
@@ -400,7 +431,8 @@ if __name__ == '__main__':
 
     if VERBOSE: print("app_num_to_profile_data",app_num_to_profile_data)
 
-    # this is the spot to batch hacks on all the data..
+    # this is the spot to write hacky scripts that see all the data..
+    ## batch_hack(app_num_to_profile_data, completed_app_dict)
     
     # now that have read all the data, filter per command line options into app_num_list
     app_num_list = []
