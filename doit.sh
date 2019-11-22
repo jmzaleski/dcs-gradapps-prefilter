@@ -29,6 +29,7 @@ DCS_STATUS=pf
 echo example of how to filter by $SCHOOL
 
 # run the pre-filtering helper script. This version presents only apps from $SCHOOL sorted by gpa
+ls -l app_numbers
 echo run command: python3 $TOOLS/eat.py app_numbers $SCHOOL $DCS_STATUS
 
 set -x
