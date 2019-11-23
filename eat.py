@@ -162,6 +162,7 @@ def list_of_app_numbers(fn_of_app_numbers):
 def parse_positional_args():
     "parse the command line parameters of this program"
     import argparse
+    #TODO: make pf stem go away again
     parser = argparse.ArgumentParser()
     parser.add_argument("fn_of_list_of_app_nums", 
                         help="""likely fn containing find . -name profile.data | sed for numbers.
@@ -254,7 +255,7 @@ def extract_gpa_for_sorted(profile_data):
     if gpa:
         return gpa
     else:
-        print("grade field parsing failed, using zero")
+        #print("grade field parsing failed, using zero")
         return 0.0
 
     
@@ -278,45 +279,47 @@ def extract_prefilter_status(profile_data):
     except:
         return "-"
 
-def pretty_print_app_list(app_num_to_profile_data_dict,num_list,file_whatsit,after_map):
+def pretty_print_app_list(app_num_to_profile_data_dict,num_list,file_whatsit,session_prefilter_decision_map):
     "print the list of applicants to filter, or just after filtering"
-    # TODO: figure out better way to do nasty after_map thing (needed to reuse this code to pretty print after menu)
+    # TODO: figure out better way to do nasty session_prefilter_decision_map thing (needed to reuse this code to pretty print after menu)
     print("\n\n===============================\nAPPS matching: ",uni_filter_regexp)
     for app_num in num_list:
         profile_data = app_num_to_profile_data_dict[app_num]
-        if after_map:
-            sgs_num = profile_data[GradAppsField.SGS_NUM]
-            if sgs_num in after_map:
-                prefilter_status = after_map[profile_data[GradAppsField.SGS_NUM]]
+        sgs_num = profile_data[GradAppsField.SGS_NUM]
+        if session_prefilter_decision_map:
+            # run after decisions have been made this session
+            if sgs_num in session_prefilter_decision_map:
+                prefilter_status = session_prefilter_decision_map[sgs_num]
             else:
                 prefilter_status = "Skip" #skipped making decision, so nothing in map
         else:
+            # being run before starting the session, no decisions yet
             prefilter_status = extract_prefilter_status(profile_data)
-            print(app_num,
-                      profile_data[GradAppsField.GENDER],
-                      "%11s"   % prefilter_status,
-                      "%5.1f" % extract_gpa_for_sorted(profile_data),
-                      profile_data[GradAppsField.SGS_NUM],
-                      profile_data[GradAppsField.DCS_UNION_INSTITUTION].rstrip('|'),
-                      file=file_whatsit
-                      )
+
+        print(app_num,
+                  profile_data[GradAppsField.GENDER],
+                  "%11s"   % prefilter_status,
+                  "%5.1f" % extract_gpa_for_sorted(profile_data),
+                  sgs_num,
+                  profile_data[GradAppsField.DCS_UNION_INSTITUTION].rstrip('|'),
+                  file=file_whatsit
+                  )
             
-        print("===============================\n")
+    print("===============================\n")
         
 def write_to_new_file(header_line, fn,dict):
     """write all lines out to a new file name"""
     #TODO: use csv.writer ?
     #TODO: rename new_csv_file
-    print("write_to_new_file:",fn,dict)
+    if VERBOSE: print("write_to_new_file:",fn,dict)
     if os.path.exists(fn):
         os.system("mv %s %s" % (fn, "/tmp"))
-        print("existing %s moved to /tmp" % fn)
+        if VERBOSE: print("existing %s moved to /tmp" % fn)
     with open(fn,'w') as new_file:
         print(header_line,file=new_file)
         for k in dict.keys():
             line = k + "," + str(dict[k])
-            #print(line)
-            print("write_to_new_file:",line)
+            if VERBOSE: print("write_to_new_file:",line)
             print(line,file=new_file)
 
 
