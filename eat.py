@@ -392,6 +392,19 @@ def  batch_hack(app_num_to_profile_data, completed_app_dict):
         
     exit(0)
     
+def find_app_numbers_in_filesystem(public_html_data_dir):
+    """find all the app numbers in the system by recursing the tree. each dir containing
+    a file called profile.data identifies an application"""
+    import os
+    app_nums = []
+    for root, dirs, files in os.walk(public_html_data_dir):
+        for file in files:
+            if file == "profile.data":
+                if VERBOSE:
+                    print(root,dirs,os.path.join(root, file))
+                    print(os.path.basename(root))
+                app_nums.append(str(os.path.basename(root)))
+    return app_nums
 
 
 if __name__ == '__main__': 
@@ -428,8 +441,9 @@ if __name__ == '__main__':
             app_num = input("enter app_number to filter > ")
             app_num_list = [ app_num]
     else:
-        app_num_list = list_of_app_numbers(fn_app_num_list)
-        
+        app_num_list = find_app_numbers_in_filesystem("./public_html/data")
+
+    #build a dict for each profile.data directory
     app_num_to_profile_data = build_dict_of_dicts(app_num_list)
 
     if VERBOSE: print("app_num_to_profile_data",app_num_to_profile_data)
