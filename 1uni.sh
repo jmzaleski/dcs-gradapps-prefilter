@@ -10,10 +10,9 @@ else
 	read -p "pre-filter by SCHOOL? (enter filter string eg TORONTO and hit enter to continue) > " SCHOOL
 fi
 
-DCS_STATUS=pf
 echo running prefilter helper filtered by $SCHOOL ...
 
-echo python3 $TOOLS/eat.py --skip-prefilter app_numbers $SCHOOL $DCS_STATUS
+echo python3 $TOOLS/eat.py --skip-prefilter $SCHOOL
 
 set -x
-python3 $TOOLS/eat.py --skip-prefilter app_numbers "$SCHOOL" $DCS_STATUS
+python3 $TOOLS/eat.py --skip-prefilter "$SCHOOL"

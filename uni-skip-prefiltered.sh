@@ -13,7 +13,7 @@ fi
 DCS_STATUS=pf
 echo running prefilter helper filtered by $SCHOOL ...
 
-echo python3 $TOOLS/eat.py app_numbers $SCHOOL $DCS_STATUS
+echo python3 $TOOLS/eat.py $SCHOOL
 
 set -x
-python3 $TOOLS/eat.py --skip-prefiltered app_numbers "$SCHOOL" $DCS_STATUS
+python3 $TOOLS/eat.py --skip-prefiltered "$SCHOOL" 
