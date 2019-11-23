@@ -159,24 +159,26 @@ def list_of_app_numbers(fn_of_app_numbers):
          return None
     return list_of_app_numbers
 
-def parse_positional_args():
+def parse_args():
     "parse the command line parameters of this program"
     import argparse
     #TODO: make pf stem go away again
     parser = argparse.ArgumentParser()
-    parser.add_argument("fn_of_list_of_app_nums", 
-                        help="""likely fn containing find . -name profile.data | sed for numbers.
-        See find-profile-data-app-numbers.sh
-        Note if fn given is -NNN it means app_number NNN, if just - prompts for number        
-        """ )
     parser.add_argument( "uni_filter_regexp", help="university to filter by" )
-    parser.add_argument( "dcs_app_status_stem",
-                         help="stem of name that non-rejected applications will have ``dcs application status'' gradapps field" )
+    #TODO: change to --skip-sort with default true
     parser.add_argument( "--sort", action="store_false",
                          help="without option menu sorted by grade. --sort leaves menu in order app_nums listed")
     parser.add_argument( "--skip-prefiltered", action="store_true",
                          help="without option already prefiltered applications appeard. --prefiltered leaves out already prefiltered applications")
-    return parser.parse_args() # returns a namespace.
+    parser.add_argument("--app_num_list", action="append", nargs="+", type=str, help="list of app numbers to prefilter")
+    
+    ns = parser.parse_args() # returns a namespace.
+    #butcher app_num_list. I'm sure I don't understand the add_argument call above
+    if ns.app_num_list:
+        assert len(ns.app_num_list) == 1
+        s = ns.app_num_list[0][0]
+        ns.app_num_list = s.split(" ")
+    return ns
 
 def fn(n,nn):
     "concoct full path to transcript, cv, sop files in papers dir"
@@ -406,15 +408,14 @@ def find_app_numbers_in_filesystem(public_html_data_dir):
                 app_nums.append(str(os.path.basename(root)))
     return app_nums
 
-
 if __name__ == '__main__': 
     import sys,os,re,functools
     #duplicate. sorta. so works on mac and windows laptops
     for dir in [TOOLS_DIR]:
         sys.path.append(dir)
         
-    cmd_line_parm_ns = parse_positional_args()
-    fn_app_num_list = cmd_line_parm_ns.fn_of_list_of_app_nums
+    cmd_line_parm_ns = parse_args()
+    cmdline_app_num_list = cmd_line_parm_ns.app_num_list
     uni_filter_regexp = cmd_line_parm_ns.uni_filter_regexp
 
     #read csv file ranking universities
@@ -425,24 +426,16 @@ if __name__ == '__main__':
     import datetime
     now = datetime.datetime.now()
     fn_suffix = "-%s-%s-%s_%s:%s" % ( now.year, now.month, now.day, now.hour, now.minute)
-    # DCS application status field of non-rejected apps will be set to this
-    dcs_app_status = cmd_line_parm_ns.dcs_app_status_stem + fn_suffix
 
-    #TODO: out of control parm parsing. can do - or -123 or -"123 456"
-    if fn_app_num_list.startswith('-'):
-        if len(fn_app_num_list)>1:
-            fields = fn_app_num_list[1:].split(" ")
-            if len(fields) == 1:
-                app_num = fn_app_num_list[1:]
-                app_num_list = [ app_num]
-            else:
-                app_num_list = fields
-        else:
-            app_num = input("enter app_number to filter > ")
-            app_num_list = [ app_num]
+    if cmd_line_parm_ns.app_num_list:
+        #just the apps that were passed on command line
+        app_num_list = cmd_line_parm_ns.app_num_list
     else:
+        #go find them all
         app_num_list = find_app_numbers_in_filesystem("./public_html/data")
 
+    if VERBOSE: print("app_num_list",app_num_list)
+        
     #build a dict for each profile.data directory
     app_num_to_profile_data = build_dict_of_dicts(app_num_list)
 
@@ -498,7 +491,6 @@ if __name__ == '__main__':
     try:
         print("prefilter above " + str(len(app_num_list)) + " applications?")
         print("matching filter:", uni_filter_regexp)
-        print("setting DCS application status field stem: " + dcs_app_status )
         response = input("enter to continue, q to exit > ")
     except:
         response = None
