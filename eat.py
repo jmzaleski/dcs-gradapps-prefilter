@@ -64,7 +64,7 @@ def parse_rhs_profile_data_line(line):
 
 
 def uni_ranking_dict_from_csv_file(fn,has_header):
-    "reads csv file mapping university name to ranking"
+    "reads csv file mapping university name to (claire's) ranking"
     import functools, csv
     #example line in CSV file:
     #UNIV OF TORONTO,1,top rank (canada),Canada,
@@ -132,6 +132,8 @@ def concoct_profile_data_file_name_from_app_number(app_num):
     """concoct full path of profile.data file from app_num.
        Depends on inside knowledge of how gradapps stores its stuff"""
     profile_data_fn = os.path.join(MSCAC_PROFILE_DATA_ROOT_DIR,app_num,"profile.data")
+    if not os.path.exists(profile_data_fn):
+        die("cannot find", profile_data_fn)
     assert os.path.exists(profile_data_fn)
     return profile_data_fn
 
@@ -177,15 +179,17 @@ def parse_args():
     if ns.app_num_list:
         assert len(ns.app_num_list) == 1
         s = ns.app_num_list[0][0]
-        ns.app_num_list = s.split(" ")
+        print(s)
+        ns.app_num_list = s.split()
+    print(ns)
     return ns
 
-def fn(n,nn):
-    "concoct full path to transcript, cv, sop files in papers dir"
-    return os.path.join(MSCAC_PAPERS_DIR, str(n), "file" + n + "-" + str(nn) + ".pdf")
+def pdf_file_no_for_app(app_number,nn):
+    "concoct full path to transcript, cv, sop files for an app_num in papers dir"
+    return os.path.join(MSCAC_PAPERS_DIR, str(app_number), "file" + app_num + "-" + str(nn) + ".pdf")
 
 def shorten_uni_name(uni_name):
-    "take a few common substrings out"
+    "take a few common substrings out of institution name"
     n = uni_name.replace("UNIVERSITY","").replace("UNIV","").replace("university","").replace("University","")
     n = n.replace("INST","").replace("INSTITUTE","").replace("Institute","").replace("institute","")
     n = n.replace("INST","").replace("INSTITUTION","").replace("Institution","").replace("institution","")
@@ -454,9 +458,9 @@ if __name__ == '__main__':
         if not re.search(uni_filter_regexp, institution):
             if VERBOSE: print("skip", app_num, "because", institution, "not matched by", uni_filter_regexp)
         else:
-            sop_fn =  fn(app_num,1)
-            cv_fn =  fn(app_num,2)
-            transcript_fn =  fn(app_num,3)
+            sop_fn =  pdf_file_no_for_app(app_num,1)
+            cv_fn =  pdf_file_no_for_app(app_num,2)
+            transcript_fn =  pdf_file_no_for_app(app_num,3)
             if not app_num in completed_app_dict.keys():
                 if VERBOSE:print("skip", app_num, "because not complete")
                 continue
@@ -553,9 +557,9 @@ if __name__ == '__main__':
     for app_num in app_num_list:
         #concoct path of app_num "papers"
         # file-NNN-1.pdf is transcript
-        sop_fn =  fn(app_num,1)
-        cv_fn =  fn(app_num,2)
-        transcript_fn =  fn(app_num,3)
+        sop_fn =  pdf_file_no_for_app(app_num,1)
+        cv_fn =  pdf_file_no_for_app(app_num,2)
+        transcript_fn =  pdf_file_no_for_app(app_num,3)
         print(os.path.basename(sop_fn),os.path.basename(cv_fn),os.path.basename(transcript_fn))
         os.system(VIEWER  + " " + sop_fn + " " + cv_fn + " " + transcript_fn)
         print('user_ref=$(cat /tmp/user_ref) && open "https://confs.precisionconference.com/~mscac20/submissionProfile?paperNumber=' + app_num +'&userRef=$user_ref"')
