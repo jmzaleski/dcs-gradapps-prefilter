@@ -164,7 +164,6 @@ def list_of_app_numbers(fn_of_app_numbers):
 def parse_args():
     "parse the command line parameters of this program"
     import argparse
-    #TODO: make pf stem go away again
     parser = argparse.ArgumentParser()
     parser.add_argument( "uni_filter_regexp", help="university to filter by" )
     #TODO: change to --skip-sort with default true
@@ -175,13 +174,13 @@ def parse_args():
     parser.add_argument("--app_num_list", action="append", nargs="+", type=str, help="list of app numbers to prefilter")
     
     ns = parser.parse_args() # returns a namespace.
-    #butcher app_num_list. I'm sure I don't understand the add_argument call above
+    #butcher app_num_list. (this hackery proves I don't understand the use of add_argument)
     if ns.app_num_list:
         assert len(ns.app_num_list) == 1
         s = ns.app_num_list[0][0]
         print(s)
         ns.app_num_list = s.split()
-    print(ns)
+    if VERBOSE: print(ns)
     return ns
 
 def pdf_file_no_for_app(app_number,nn):
@@ -190,16 +189,19 @@ def pdf_file_no_for_app(app_number,nn):
 
 def shorten_uni_name(uni_name):
     "take a few common substrings out of institution name"
-    n = uni_name.replace("UNIVERSITY","").replace("UNIV","").replace("university","").replace("University","")
-    n = n.replace("INST","").replace("INSTITUTE","").replace("Institute","").replace("institute","")
-    n = n.replace("INST","").replace("INSTITUTION","").replace("Institution","").replace("institution","")
-    n = n.replace(" of","").replace(" OF","")
-    n = n.replace("Science","Sci").replace("science","sci")
-    n = n.replace("Technology","Tech").replace("technology","tech")
-    n = n.lstrip(" ")
-    n = n.rstrip(" ")
-    n = n.replace(" ","_")
-    return n
+    return ( uni_name.replace("UNIVERSITY","")
+            .replace("UNIV","")
+            .replace("university","")
+            .replace("University","") 
+            .replace("INST","").replace("INSTITUTE","").replace("Institute","").replace("institute","")
+            .replace("INST","").replace("INSTITUTION","").replace("Institution","").replace("institution","")
+            .replace(" of","").replace(" OF","")
+            .replace("Science","Sci").replace("science","sci")
+            .replace("Technology","Tech").replace("technology","tech")
+            .lstrip(" ")
+            .rstrip(" ")
+            .replace(" ","_") )
+
     
 
 def extract_gpa(profile_data, u_field_name,gpa_field_name):
@@ -356,7 +358,6 @@ def prefilter_status_field(profile_data):
 
 def prefilter_prompt(app_num,profile_data,ix,n):
     "prompt line with a bunch of very compressed info. gender, school, rank, gpa "
-    #TODO: any need for this any more?
     uni_name = extract_uni_name_from_multiple_fields(profile_data)
     try:
         ranking = int(uni_ranking[uni_name])
@@ -370,6 +371,61 @@ def prefilter_prompt(app_num,profile_data,ix,n):
                                                   ranking, gpa)
     #print("prompt", prompt)
     return prompt
+
+    
+def prefilter_info_panel(app_num,profile_data,ix,n):
+    "compact, few line, application history"
+    
+    def extract_uni_info_tuple( which_uni, which_mark):
+        "return tuple fetching info about app's schooling "
+        uni_name = extract_uni(profile_data, which_uni)
+        gpa  = None
+        rank = None
+        if uni_name:
+            gpa = extract_gpa(profile_data, which_uni, which_mark)
+        try:
+            rank = int(uni_ranking[uni_name])
+        except:
+            return (uni_name, gpa, 1001) #ie sentinel (bogus) rank
+        return (uni_name,gpa,rank)
+
+    (uni1, gpa1, rank1) = extract_uni_info_tuple(GradAppsField.UNI_1, GradAppsField.OVERALL_AVG_1)
+    (uni2, gpa2, rank2) = extract_uni_info_tuple(GradAppsField.UNI_2, GradAppsField.OVERALL_AVG_2)
+    (uni3, gpa3, rank3) = extract_uni_info_tuple(GradAppsField.UNI_3, GradAppsField.OVERALL_AVG_3)
+
+    COLS_FMT =  "%-40s %5s %5s\n"
+    HDR_FMT = "%5s" + COLS_FMT
+    
+    F1_FMT =  "%-5d"
+    FMT = F1_FMT + COLS_FMT
+    F = F1_FMT + "-\n"
+
+    ix=1
+    panel = "institution info from app %d:\n" % (int(app_num))
+    
+    panel += HDR_FMT % ( "-"*5, "-"*40,  "-" * 5, "-"*5 )
+    panel += HDR_FMT % ( "#",   "INSTITUTION", "AVG", "RANK" )
+    panel += HDR_FMT % ( "-"*5, "-"*40,  "-" * 5, "-"*5 )
+    
+    if uni1:
+        panel += FMT  % (ix, uni1,gpa1,rank1)
+    else:
+        panel += F % ix
+        
+    ix +=1
+    if uni2:
+        panel += FMT  % (ix, uni2,gpa2,rank2)
+    else:
+        panel += F % ix
+
+    ix +=1
+    if uni3:
+        panel += FMT % (ix, uni3,gpa3,rank3)
+    else:
+        panel += F % ix
+        
+    panel += HDR_FMT % ( "-"*5, "-"*40,  "-" * 5, "-"*5 )
+    return panel
 
 def  batch_hack(app_num_to_profile_data, completed_app_dict):
     "this printed out a csv file which we used to clean up the dcs application status fields"
@@ -565,12 +621,14 @@ if __name__ == '__main__':
         print('user_ref=$(cat /tmp/user_ref) && open "https://confs.precisionconference.com/~mscac20/submissionProfile?paperNumber=' + app_num +'&userRef=$user_ref"')
         resp = ""
         while True:
-            print("choose dcs prefilter status for application >>>",app_num,"<<< from menu below")
             profile_data = app_num_to_profile_data[app_num]
                         
-            ########## menu for actual decision 
-            prompt = "%s enter a letter > " % (
+            ########## menu for actual decision
+            print(prefilter_info_panel( app_num, profile_data,dcs_status_map_ix, len(app_num_list)),end='')
+            
+            prompt = "%s enter letter indicating prefilter_status > " % (
                 prefilter_prompt(int(app_num), profile_data, dcs_status_map_ix, len(app_num_list)) )
+            
             menu = PrefilterMenu(response_code_list, menu_line_dict , prompt)
             
             resp = menu.menu()
