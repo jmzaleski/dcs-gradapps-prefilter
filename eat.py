@@ -290,6 +290,7 @@ def extract_prefilter_status(profile_data):
 def pretty_print_app_list(app_num_to_profile_data_dict,num_list,file_whatsit,session_prefilter_decision_map):
     "print the list of applicants to filter, or just after filtering"
     # TODO: figure out better way to do nasty session_prefilter_decision_map thing (needed to reuse this code to pretty print after menu)
+    #TODO: rename file_whatsit
     print("\n\n===============================\nAPPS matching: ",uni_filter_regexp)
     for app_num in num_list:
         profile_data = app_num_to_profile_data_dict[app_num]
@@ -375,7 +376,6 @@ def prefilter_prompt(app_num,profile_data,ix,n):
     
 def prefilter_info_panel(app_num,profile_data,ix,n):
     "compact, few line, application history"
-    
     def extract_uni_info_tuple( which_uni, which_mark):
         "return tuple fetching info about app's schooling "
         uni_name = extract_uni(profile_data, which_uni)
@@ -388,43 +388,25 @@ def prefilter_info_panel(app_num,profile_data,ix,n):
         except:
             return (uni_name, gpa, 1001) #ie sentinel (bogus) rank
         return (uni_name,gpa,rank)
-
-    (uni1, gpa1, rank1) = extract_uni_info_tuple(GradAppsField.UNI_1, GradAppsField.OVERALL_AVG_1)
-    (uni2, gpa2, rank2) = extract_uni_info_tuple(GradAppsField.UNI_2, GradAppsField.OVERALL_AVG_2)
-    (uni3, gpa3, rank3) = extract_uni_info_tuple(GradAppsField.UNI_3, GradAppsField.OVERALL_AVG_3)
-
-    COLS_FMT =  "%-40s %5s %5s\n"
-    HDR_FMT = "%5s" + COLS_FMT
+    def append_to_panel(ix,tuple,fmt):
+        "refactor format code until it looks like this"
+        (uni1,gpa1,rank1) = tuple
+        if uni1:
+            return fmt  % (ix, uni1,gpa1,rank1)
+        else:
+            return "%-5d-\n" % ix
     
-    F1_FMT =  "%-5d"
-    FMT = F1_FMT + COLS_FMT
-    F = F1_FMT + "-\n"
-
-    ix=1
+    HDR_FMT = "%-5s%-40s %5s %5s\n"
+    FMT     = "%-5d%-40s %5s %5s\n"
+    
     panel = "institution info from app %d:\n" % (int(app_num))
-    
-    panel += HDR_FMT % ( "-"*5, "-"*40,  "-" * 5, "-"*5 )
-    panel += HDR_FMT % ( "#",   "INSTITUTION", "AVG", "RANK" )
-    panel += HDR_FMT % ( "-"*5, "-"*40,  "-" * 5, "-"*5 )
-    
-    if uni1:
-        panel += FMT  % (ix, uni1,gpa1,rank1)
-    else:
-        panel += F % ix
-        
-    ix +=1
-    if uni2:
-        panel += FMT  % (ix, uni2,gpa2,rank2)
-    else:
-        panel += F % ix
-
-    ix +=1
-    if uni3:
-        panel += FMT % (ix, uni3,gpa3,rank3)
-    else:
-        panel += F % ix
-        
-    panel += HDR_FMT % ( "-"*5, "-"*40,  "-" * 5, "-"*5 )
+    panel += append_to_panel( "="*4, ("="*40, "="*5, "="*5), HDR_FMT)
+    panel += append_to_panel( "#", ("Institution", "GPA", "rank"), HDR_FMT)
+    panel += append_to_panel( "-"*4, ("-"*40, "-"*5, "-"*5), HDR_FMT)
+    panel += append_to_panel(1, extract_uni_info_tuple(GradAppsField.UNI_1, GradAppsField.OVERALL_AVG_1),FMT)
+    panel += append_to_panel(2, extract_uni_info_tuple(GradAppsField.UNI_2, GradAppsField.OVERALL_AVG_2),FMT)
+    panel += append_to_panel(3, extract_uni_info_tuple(GradAppsField.UNI_3, GradAppsField.OVERALL_AVG_3),FMT)
+    panel += append_to_panel( "="*4, ("="*40, "="*5, "="*5), HDR_FMT)
     return panel
 
 def  batch_hack(app_num_to_profile_data, completed_app_dict):
@@ -679,7 +661,7 @@ if __name__ == '__main__':
     pretty_print_app_list(app_num_to_profile_data,app_num_list,sys.stdout,decisions)
 
     #########
-    # rest of script largely BS for convenience putting the output somewhere useful
+    # rest of script largely for sending decisions back to gradapps
     #########
     print("\n=========================")
     os.system("ls -l " + OFN)
@@ -699,8 +681,7 @@ if __name__ == '__main__':
     curl_dcsstatus_cmd =  CURL_TEMPL % ( BFN_basename, URL_TEMPL % "dcsstatus" )
 
     # probably will need ssh config support or will prompt for password
-    #print(rsync_cmd)
-    #print("ssh qew", "'" + curl_cmd + "'") #gross quoting, sorry
+
     print(OFN,BFN)
     resp = input("hit Enter rsync to %s  > " % CSLAB_USERID)
     if resp.startswith('s'):
@@ -711,16 +692,15 @@ if __name__ == '__main__':
     print("ls -ltr | tail -2 to see if rsync'd files made it..")
     os.system("ssh %s ls -ltr %s/ | tail -2" % (CSLAB_USERID, MSCAC_PREFILTER_DIR_NAME))
 
-    #print("\nnow ssh to", CSLAB_USERID, "and curl file to gradapps\n\n")
     ssh_cmd = "ssh -tt %s '%s'" % (CSLAB_USERID, curl_cmd )
     ssh_dcsstatus_cmd = "ssh -tt %s '%s'" % (CSLAB_USERID, curl_dcsstatus_cmd)
-    #print(ssh_cmd)
-    #print(ssh_dcsstatus_cmd)
-    #resp = input("hit enter to curl the prefilter choices to gradapps server.. > ")
+
     os.system(ssh_cmd)
     os.system(ssh_dcsstatus_cmd)
 
     with open("log","a") as a_file_whatsit:
+        import datetime
+        print(datetime.datetime.now(),file=file_whatsit)
         pretty_print_app_list(app_num_to_profile_data,app_num_list,a_file_whatsit,decisions)
-
+        print("==================================", file=file_whatsit)
 
