@@ -433,8 +433,7 @@ def  batch_hack(app_num_to_profile_data, completed_app_dict):
         sgs_num = profile_data[GradAppsField.SGS_NUM]
         #print(sgs_num, prefilter_status_map[prefilter_dec],prefilter_status_field(profile_data))
         print("%s,%s" % (sgs_num, prefilter_status_field(profile_data)))
-        
-    exit(0)
+    exit(0) #make sure batch goes no further
     
 def find_app_numbers_in_filesystem(public_html_data_dir):
     """find all the app numbers in the system by recursing the tree. each dir containing
@@ -700,7 +699,7 @@ if __name__ == '__main__':
 
     with open("log","a") as a_file_whatsit:
         import datetime
-        print(datetime.datetime.now(),file=file_whatsit)
+        print(datetime.datetime.now(),file=a_file_whatsit)
         pretty_print_app_list(app_num_to_profile_data,app_num_list,a_file_whatsit,decisions)
-        print("==================================", file=file_whatsit)
+        print("==================================", file=a_file_whatsit)
 
