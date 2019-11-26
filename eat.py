@@ -434,6 +434,34 @@ def  batch_hack(app_num_to_profile_data, completed_app_dict):
         #print(sgs_num, prefilter_status_map[prefilter_dec],prefilter_status_field(profile_data))
         print("%s,%s" % (sgs_num, prefilter_status_field(profile_data)))
     exit(0) #make sure batch goes no further
+
+def  sams_batch_hack(app_num_to_profile_data, completed_app_dict):
+    "this printed out a csv file which we used to set ALL dcs application status fields to the prefilter one"
+    app_num_list = []
+    for app_num in app_num_to_profile_data.keys():
+        profile_data = app_num_to_profile_data[app_num]
+        institution = profile_data[GradAppsField.DCS_UNION_INSTITUTION]
+        if VERBOSE: print("institution",uni_filter_regexp, institution)
+        if not app_num in completed_app_dict.keys():
+            if VERBOSE:print( app_num, "not complete")
+            #continue
+        elif len(profile_data[GradAppsField.PREFILTER_STATUS]) == 0:
+            if VERBOSE: print(app_num, "prefilter_status not set")
+            #continue
+        app_num_list.append(app_num)
+    #print(app_num_list)
+
+    #print(prefilter_status_map[1])
+    for app_num in app_num_list:
+        profile_data = app_num_to_profile_data[app_num]
+        # prefilter_dec = int(profile_data[GradAppsField.PREFILTER_STATUS])
+        # if prefilter_dec == 1 or prefilter_dec == 4:
+        #     continue #skip reject
+        sgs_num = profile_data[GradAppsField.SGS_NUM]
+        #print(sgs_num, prefilter_status_map[prefilter_dec],prefilter_status_field(profile_data))
+        #print("%s,%s" % (sgs_num, prefilter_status_field(profile_data)))
+        print("%s,%s" % (sgs_num, prefilter_status_field(profile_data)))
+    exit(0) #make sure batch goes no further
     
 def find_app_numbers_in_filesystem(public_html_data_dir):
     """find all the app numbers in the system by recursing the tree. each dir containing
@@ -483,7 +511,7 @@ if __name__ == '__main__':
     if VERBOSE: print("app_num_to_profile_data",app_num_to_profile_data)
 
     # this is the spot to write hacky scripts that see all the data..
-    ## batch_hack(app_num_to_profile_data, completed_app_dict)
+    #sams_batch_hack(app_num_to_profile_data, completed_app_dict) #reset all prefilter_status
     
     # now that have read all the data, filter per command line options into app_num_list
     app_num_list = []
