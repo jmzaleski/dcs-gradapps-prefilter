@@ -1,5 +1,6 @@
 
 import PyPDF3 #note weird name. obtained by pip3 install pypdf3
+import types # for SimpleNamespace
 
 VERBOSE=False
 
@@ -25,63 +26,113 @@ if not os.path.exists(MSCAC_PAPERS_DIR): die(MSCAC_PAPERS_DIR, "does not exist")
 
 MSCAC_PROFILE_DATA_ROOT_DIR = os.path.join(MSCAC_DIR,"public_html","data")
 if not os.path.exists(MSCAC_PROFILE_DATA_ROOT_DIR): die(MSCAC_PROFILE_DATA_ROOT_DIR, "does not exist")
+    
+def get_creation_date(info):
+    #from https://stackoverflow.com/questions/16503075/convert-creationtime-of-pdf-to-a-readable-format-in-python
+    if '/CreationDate' in info:
+        datestring = info['/CreationDate'][2:-7]
+    elif 'CreationDate' in info:
+        datestring = info['CreationDate'][2:-7]
+    elif '/ModDate' in info:
+        datestring = info['/ModDate'][2:-7]
+    elif 'ModDate' in info:
+        datestring = info['ModDate'][2:-7]
+    else:
+        print("no creation date in info??", path)
+        print("info",info)
+        return None
+    if VERBOSE: print("datestring from info['/CreationDate'][2:-7]", datestring)
+    from time import mktime, strptime
+    from datetime import datetime
+    try:
+        ts = strptime(datestring, "%Y%m%d%H%M%S")
+        dt = datetime.fromtimestamp(mktime(ts))
+        return dt.date()
+    except:
+        print("date conversion throws on", datestring)
+        return None
 
- 
-def get_info(path):
+def get_creator(info):
+    if '/Creator' in info:
+        name = info['/Creator']
+    elif 'Creator' in info and len(info["Creator"])>0:
+        name = info['Creator']
+    elif 'Producer' in info:
+        name = info['Producer']
+    elif '/Producer' in info:
+        name = info['/Producer']
+    else:
+        name = None
+    if not name:
+        print("no Creator found in", info, file=sys.stderr)
+        return None
+    else:
+        return name
+    
+def get_author(info):
+    if '/Author' in info:
+        name = info['/Author']
+    elif 'Author' in info:
+        name = info['Author']
+    else:
+        name = None
+    if not name:
+        print("no Author found in", info,file=sys.stderr)
+        return None
+    else:
+        print("Author",name)
+        return name
+
+    
+def get_info_ns(path):
     with open(path, 'rb') as f:
         my_pdf_file_reader = PyPDF3.pdf.PdfFileReader(f)
         info = my_pdf_file_reader.getDocumentInfo()
         if not info:
             return None
- 
-        if VERBOSE: print(info)
- 
-        if VERBOSE:
-            number_of_pages = my_pdf_file_reader.getNumPages()
-            author = info.author
-            creator = info.creator
-            producer = info.producer
-            subject = info.subject
-            title = info.title
-            print('author:', info.author)
-            print('creator:',info.creator)
-            print('producer:',info.producer)
-            print('subject:', info.subject)
-            print('title:', info.title)
-        
-        #from https://stackoverflow.com/questions/16503075/convert-creationtime-of-pdf-to-a-readable-format-in-python
-        if '/CreationDate' in info:
-            datestring = info['/CreationDate'][2:-7]
-        elif 'CreationDate' in info:
-            datestring = info['CreationDate'][2:-7]
-        elif '/ModDate' in info:
-            datestring = info['/ModDate'][2:-7]
-        elif 'ModDate' in info:
-            datestring = info['ModDate'][2:-7]
-        else:
-            print("no creation date in info??", path)
-            print("info",info)
-            return None
-        
-    #print("datestring from info['/CreationDate'][2:-7]", datestring)
-    from time import mktime, strptime
-    from datetime import datetime
-    try:
-        ts = strptime(datestring, "%Y%m%d%H%M%S")
-    except:
-        print("strptime throws on", datestring)
-        return None
-    dt = datetime.fromtimestamp(mktime(ts))
-    d = dt.date()
-    if VERBOSE:
-        print("creation date",d)
-        os.system("ls -l " + path)
-    return d
+        print("creator", get_creator(info))
+        print("author", get_author(info))
+        print("creation date", get_creation_date(info))
 
+        if VERBOSE:
+            print(type(info).__name__)
+            print(info)
+        dict = {}
+        dict["author"] = get_author(info)
+        dict["creator"] = get_creator(info)
+        dict["creationdate"] = get_creation_date(info)
+        ns = types.SimpleNamespace(**dict)
+        #return( get_creation_date(info) )
+        #return dict["creationdate"]
+        #return ns.creationdate
+        return ns
+
+def naive_get_info(path):
+    "before I learned the havoc in PDF metadata keys"
+    with open(path, 'rb') as f:
+        my_pdf_file_reader = PyPDF3.pdf.PdfFileReader(f)
+        info = my_pdf_file_reader.getDocumentInfo()
+        if not info:
+            return None
+        print(type(info).__name__)
+        print(info)
+        number_of_pages = my_pdf_file_reader.getNumPages()
+        author = info.author
+        creator = info.creator
+        producer = info.producer
+        subject = info.subject
+        title = info.title
+        print('author:', info.author)
+        print('creator:',info.creator)
+        print('producer:',info.producer)
+        print('subject:', info.subject)
+        print('title:', info.title)
+                    
 if __name__ == '__main__':
+    import os, sys
     path = os.path.join(MSCAC_PAPERS_DIR,'326','file326-3.pdf')
     print(path)
-    print(get_info(path))
+    print(get_info_ns(path))
 
     dict = {}
     for root, dirs, files in os.walk(MSCAC_PROFILE_DATA_ROOT_DIR):
@@ -105,7 +156,9 @@ if __name__ == '__main__':
         if VERBOSE: print(app_num)
         for fn in file_list:
             try:
-                file_creation_date = get_info(fn)
+                info_ns = get_info_ns(fn)
+                file_creation_date = info_ns.creationdate
+                #file_creation_date = get_info_ns(fn)
                 if file_creation_date:
                     if not app_num in dict_dates:
                         dict_dates[app_num] = []
@@ -115,7 +168,7 @@ if __name__ == '__main__':
                     print( app_num, os.path.basename(fn), 'NO DATE', file=sys.stderr)
             except:
                 import traceback,sys
-                print("get_info throws for", app_num, fn, file=sys.stderr)
+                print("get_info_ns throws for", app_num, fn, file=sys.stderr)
                 traceback.print_exc(file=sys.stderr)
 
     input('ready for date search?')
