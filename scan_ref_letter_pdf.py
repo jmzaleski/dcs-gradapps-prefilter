@@ -140,7 +140,17 @@ def get_info_ns(path):
 def pretty_print(app_num, file_list):
     print("app_num", app_num)
     for fn in file_list:
-        print("    %020s,%30s,%30s" % (
+        print("%5s,%020s,%30s,%30s" % (
+                app_num,
+                os.path.basename(fn),
+                pdf_meta_data_for_fn[fn].author,
+                pdf_meta_data_for_fn[fn].creator
+                ))
+
+def print_as_csv(app_num, file_list):
+    for fn in file_list:
+        print("%s,%s,%s,%s" % (
+                app_num,
                 os.path.basename(fn),
                 pdf_meta_data_for_fn[fn].author,
                 pdf_meta_data_for_fn[fn].creator
@@ -230,19 +240,49 @@ if __name__ == '__main__':
                     author_match[app_num] = app_num
                     #print("app_num", app_num, "author match", a0)
                 
-    print("creation date, creator and author match")
-    for app_num in author_match:
-        pretty_print(app_num, dict[app_num])
-    print("==============================================")
-    print("creation date, creator match")
-    for app_num in creator_match:
-        pretty_print(app_num, dict[app_num])
-    print("==============================================")
     print("creation date match")
     for app_num in creation_dates_match:
         pretty_print(app_num, dict[app_num])
-    print("==============================================")
+    print("=========== end creationdate ============================\n\n\n")
+    print("creation date, creator match")
+    for app_num in creator_match:
+        pretty_print(app_num, dict[app_num])
+    print("=========== end creationdate,creator ============================\n\n\n")
+    print("creation date, creator and author match")
+    for app_num in author_match:
+        pretty_print(app_num, dict[app_num])
+    print("=========== end creationdate,creator,author match ============================\n\n\n")
+    for app_num in author_match:
+        pretty_print(app_num, dict[app_num])
 
+    def write_as_csv_file(filtered_dict_of_app_num, csv_file_name):
+        "try csv package to get the badzo's out of this program and into excel"
+        import csv
+        with open(csv_file_name, mode='w') as csv_file:
+            csv_writer = csv.writer(csv_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+            for app_num in filtered_dict_of_app_num:
+                for fn in dict[app_num]:
+                    csv_writer.writerow([app_num,os.path.basename(fn),
+                                             pdf_meta_data_for_fn[fn].creationdate,
+                                             pdf_meta_data_for_fn[fn].author,
+                                             pdf_meta_data_for_fn[fn].creator])
+        os.system("ls -l %s" % csv_file_name)
+
+    write_as_csv_file(creation_dates_match,"creationdate.csv")
+    write_as_csv_file(creator_match,"creationdate-creator.csv")
+    write_as_csv_file(author_match,"creationdate-author-creator.csv")
+    
+    # import csv
+    # with open(csv_file_name, mode='w') as csv_file:
+    #     csv_writer = csv.writer(csv_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+    #     for app_num in author_match:
+    #         for fn in dict[app_num]:
+    #             csv_writer.writerow([app_num,os.path.basename(fn),
+    #                                      pdf_meta_data_for_fn[fn].creationdate,
+    #                                      pdf_meta_data_for_fn[fn].author,
+    #                                      pdf_meta_data_for_fn[fn].creator])
+    # os.system("ls -l %s" % csv_file_name)
+        
     exit(0)
 
 # PDF date/time format http://www.verypdf.com/pdfinfoeditor/pdf-date-format.htm
