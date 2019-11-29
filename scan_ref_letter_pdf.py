@@ -205,9 +205,9 @@ if __name__ == '__main__':
                                              pdf_meta_data_for_fn[fn].creator])
         os.system("ls -l %s" % csv_file_name)
 
-    def scan(app_num, getter):
+    def scan(fn_list, getter):
         "what to call it?? look for repeats of values returned by getter across files"
-        file_list = dict[app_num]
+        file_list = fn_list
         if len(file_list) < 2:
             # only one file? can't deduce anything
             return False
@@ -225,7 +225,7 @@ if __name__ == '__main__':
         "maybe over factoring because we can"
         d = {}
         for app_num in dict_on_app_num:
-            if scan(app_num, getter):
+            if scan(dict[app_num], getter):
                 d[app_num] = app_num
         write_as_csv_file(d,fn)
         return d
