@@ -90,9 +90,6 @@ def get_info_ns(path):
         info = my_pdf_file_reader.getDocumentInfo()
         if not info:
             return None
-        print("creator", get_creator(info))
-        print("author", get_author(info))
-        print("creation date", get_creation_date(info))
 
         if VERBOSE:
             print(type(info).__name__)
@@ -102,9 +99,9 @@ def get_info_ns(path):
         dict["creator"] = get_creator(info)
         dict["creationdate"] = get_creation_date(info)
         ns = types.SimpleNamespace(**dict)
-        #return( get_creation_date(info) )
-        #return dict["creationdate"]
-        #return ns.creationdate
+        print("ns.creator:", ns.creator)
+        print("ns.author:", ns.author)
+        print("ns.creationdate:", ns.creationdate)        
         return ns
 
 def naive_get_info(path):
@@ -131,25 +128,28 @@ def naive_get_info(path):
 if __name__ == '__main__':
     import os, sys
     path = os.path.join(MSCAC_PAPERS_DIR,'326','file326-3.pdf')
-    print(path)
-    print(get_info_ns(path))
+    
+    if False:
+        print(path)
+        print(get_info_ns(path))
+        exit(0)
 
+    #traverse the directory tree and collect all the PDF files under each app
     dict = {}
     for root, dirs, files in os.walk(MSCAC_PROFILE_DATA_ROOT_DIR):
         for file in files:
             if file.endswith('pdf') or file.endswith('PDF'): 
-                #print(root,dirs,os.path.join(root, file))
                 (dir,fn) = os.path.split(root)
-                #print (root,dirs,files,file,dir,fn)
                 (dir2,app_num) =os.path.split(dir)
-                #print (dir2,fn2)
-                #input("xxxx")
-                #app_num = str(os.path.basename(root))
                 print(app_num)
                 if not app_num in dict:
                     dict[app_num] = []
                 dict[app_num].append(os.path.join(root, file))
 
+    #TODO: scan the files in each app and stash the PDF meta information for each one
+    
+    #
+    # look at every file in every app and collect the creation date of each file
     dict_dates = {}
     for app_num in dict.keys():
         file_list = dict[app_num]
@@ -172,7 +172,8 @@ if __name__ == '__main__':
                 traceback.print_exc(file=sys.stderr)
 
     input('ready for date search?')
-    
+
+    #look at the dates and look for files that were created on same date
     import datetime
     for app_num in dict_dates.keys():
         date_list = dict_dates[app_num]
