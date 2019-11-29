@@ -169,8 +169,8 @@ if __name__ == '__main__':
     # gradapps keeps the review letters for a applicant in the data/app_num/reviews directory
     # scan the files in each app and stash the PDF meta information for each one
     
-    dict = {} # maps app_num to list of files in app_num/reviews
-    reviews_for_app_num = {} # maps app_num to list of files in app_num/reviews
+    fn_for_app_num       = {} # maps app_num to list of files in app_num/reviews
+    reviews_for_app_num  = {} # maps app_num to list of files in app_num/reviews
     pdf_meta_data_for_fn = {}
     
     for root, dirs, files in os.walk(MSCAC_PROFILE_DATA_ROOT_DIR):
@@ -179,11 +179,11 @@ if __name__ == '__main__':
                 (dir,fn) = os.path.split(root)
                 (dir2,app_num) =os.path.split(dir)
                 #print(app_num)
-                if not app_num in dict:
-                    dict[app_num] = []
+                if not app_num in fn_for_app_num:
+                    fn_for_app_num[app_num] = []
                     reviews_for_app_num[app_num] = []
                 ffn = os.path.join(root, file)
-                dict[app_num].append(ffn)
+                fn_for_app_num[app_num].append(ffn)
                 reviews_for_app_num[app_num].append(ffn)
                 pdf_meta_data_for_fn[ffn] = get_info_ns(ffn)
     if VERBOSE:
@@ -198,7 +198,7 @@ if __name__ == '__main__':
         with open(csv_file_name, mode='w') as csv_file:
             csv_writer = csv.writer(csv_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
             for app_num in filtered_dict_of_app_num:
-                for fn in dict[app_num]:
+                for fn in fn_for_app_num[app_num]:
                     csv_writer.writerow([app_num,os.path.basename(fn),
                                              pdf_meta_data_for_fn[fn].creationdate,
                                              pdf_meta_data_for_fn[fn].author,
@@ -225,20 +225,20 @@ if __name__ == '__main__':
         "maybe over factoring because we can"
         d = {}
         for app_num in dict_on_app_num:
-            if scan(dict[app_num], getter):
+            if scan(fn_for_app_num[app_num], getter):
                 d[app_num] = app_num
         write_as_csv_file(d,fn)
         return d
         
-    cd       = fancy_scan(dict, lambda fn: pdf_meta_data_for_fn[fn].creationdate, "creationdate.csv")
-    cd_c     = fancy_scan(cd,   lambda fn: pdf_meta_data_for_fn[fn].creator,      "creationdate-creator.csv")
-    cd_c_a   = fancy_scan(cd_c, lambda fn: pdf_meta_data_for_fn[fn].author,       "creationdate-creator-author.csv")
+    cd       = fancy_scan(fn_for_app_num, lambda fn: pdf_meta_data_for_fn[fn].creationdate, "creationdate.csv")
+    cd_c     = fancy_scan(cd,             lambda fn: pdf_meta_data_for_fn[fn].creator,      "creationdate-creator.csv")
+    cd_c_a   = fancy_scan(cd_c,           lambda fn: pdf_meta_data_for_fn[fn].author,       "creationdate-creator-author.csv")
             
     for app_num in cd_c_a.keys():
-        pretty_print(app_num,dict[app_num])
+        pretty_print(app_num,fn_for_app_num[app_num])
         
     if False: #example
-        pretty_print("112",dict["112"])
+        pretty_print("112",fn_for_app_num["112"])
         print(scan("112",lambda fn: pdf_meta_data_for_fn[fn].creationdate))
 
     exit(0)
