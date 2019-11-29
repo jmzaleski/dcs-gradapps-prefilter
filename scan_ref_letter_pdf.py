@@ -1,6 +1,7 @@
 VERBOSE=False
 
 def die(*objs):
+    "outa here. too broken to continue"
     print("FATAL ERROR: ", *objs, file=sys.stderr)
     exit(42)
 
@@ -10,10 +11,6 @@ def err_msg(*objs):
 import PyPDF3 #note weird name. obtained by pip3 install pypdf3
 import types # for SimpleNamespace
 
-
-def die(*objs):
-    print("ERROR: ", *objs, file=sys.stderr)
-    exit(42)
 
 import os
 HOME_DIR = os.environ['HOME'] 
@@ -38,8 +35,11 @@ def get_info_ns(path):
     "look at the pdf metadata in path and return a type.SimpleNamespace containing author, creator, creationdate"
 
     def pdf_warning(*objs):
-        print("PDF WARNING:", *objs, path, file=sys.stderr)
+        "wrapper that closes over path"
+        if VERBOSE: print("PDF WARNING:", *objs, path, file=sys.stderr)
+        
     def get_creation_date(info):
+        "look for creation date in PDF metadata"
         #from https://stackoverflow.com/questions/16503075/convert-creationtime-of-pdf-to-a-readable-format-in-python
         try:
             if '/CreationDate' in info:
@@ -67,7 +67,9 @@ def get_info_ns(path):
         except:
             pdf_warning("date conversion throws on", datestring)
             return None
+        
     def get_creator(info):
+        "look for creator (program that wrote the file) data in PDF metadata"
         try:
             if '/Creator' in info:
                 name = info['/Creator']
@@ -89,6 +91,7 @@ def get_info_ns(path):
             return None
 
     def get_author(info):
+        "look for author data in PDF metadata"
         try:
             if '/Author' in info:
                 name = info['/Author']
@@ -165,8 +168,8 @@ if __name__ == '__main__':
         print(get_info_ns(path))
         exit(0)
 
-    #traverse the directory tree and collect all the PDF files under each app
-    #gradapps keeps the review letters for a applicant in the data/app_num/reviews directory
+    # traverse the directory tree and collect all the PDF files under each app
+    # gradapps keeps the review letters for a applicant in the data/app_num/reviews directory
     # scan the files in each app and stash the PDF meta information for each one
     
     dict = {} # maps app_num to list of files in app_num/reviews
@@ -186,12 +189,54 @@ if __name__ == '__main__':
                 dict[app_num].append(ffn)
                 reviews_for_app_num[app_num].append(ffn)
                 pdf_meta_data_for_fn[ffn] = get_info_ns(ffn)
-    if True:
+    if VERBOSE:
         print("dump pdf_meta_data_for_fn{")
         for fn in pdf_meta_data_for_fn:
             print(os.path.basename(fn), pdf_meta_data_for_fn[fn])
         print("}end dump pdf_meta_data_for_fn")
 
+    def scan(app_num, getter):
+        file_list = dict[app_num]
+        if len(file_list) < 2:
+            # only one file? can't deduce anything
+            return False
+        fn_iter = iter(file_list)
+        x0 = getter(next(fn_iter))
+        if not x0:
+            return False
+        for fn in fn_iter:
+            xi = getter(fn)
+            if not xi or xi != x0:
+                return False
+        return True
+
+    if VERBOSE:
+        pretty_print("112",dict["112"])
+        print(scan("112",lambda fn: pdf_meta_data_for_fn[fn].creationdate))
+    
+    cd = {}
+    for app_num in dict:
+        if scan(app_num, lambda fn: pdf_meta_data_for_fn[fn].creationdate):
+            cd[app_num] = app_num
+    cd_c = {}
+    for app_num in cd.keys():
+        if scan(app_num, lambda fn: pdf_meta_data_for_fn[fn].creator):
+            cd_c[app_num] = app_num
+    cd_c_a = {}
+    for app_num in cd.keys():
+        if scan(app_num, lambda fn: pdf_meta_data_for_fn[fn].author):
+            cd_c_a[app_num] = app_num
+            
+    for app_num in cd_c_a.keys():
+        pretty_print(app_num,dict[app_num])
+    exit(0)
+    
+
+    # real work here. compare the metadata for the files submitted by each app
+    # it's suspicious if they are all created on the same day
+    # more so if by the same creator program
+    # smoking bloody gun if author same too
+    # TODO: clean up this code! I'd give it a D if i were grading it
     import datetime
     creation_dates_match = {}
     creator_match = {}
@@ -271,7 +316,33 @@ if __name__ == '__main__':
     write_as_csv_file(creation_dates_match,"creationdate.csv")
     write_as_csv_file(creator_match,"creationdate-creator.csv")
     write_as_csv_file(author_match,"creationdate-author-creator.csv")
-    
+
+    print( cd == creation_dates_match)
+    print("cd",cd.keys())
+    print("creation_dates_match",creation_dates_match.keys())
+    for app_num in cd:
+        if not app_num in creation_dates_match:
+            print(app_num, "in cd but not in creation_dates_match")
+    for app_num in creation_dates_match:
+        if not app_num in cd:
+            print(app_num, "in creation_dates_match but not in cd")
+
+    scd = set(cd.keys())
+    sc_d = set(creation_dates_match.keys())
+    l = list(cd.keys())
+    l.sort()
+    print("cd.keys()",l)
+    ll = list(creation_dates_match.keys())
+    ll.sort()
+    print("creation_dates_match.keys()",ll)
+    #print("cd.keys()",list(cd.keys()).sort())
+    #print("creation_dates_match.keys()",list(creation_dates_match.keys()).sort())
+    print("xor",scd.symmetric_difference(sc_d))
+    print("intersection",scd.intersection(sc_d))
+    print("difference",scd.difference(sc_d))
+    for app_num in scd.difference(sc_d):
+        pretty_print(app_num,dict[app_num])
+
     # import csv
     # with open(csv_file_name, mode='w') as csv_file:
     #     csv_writer = csv.writer(csv_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
