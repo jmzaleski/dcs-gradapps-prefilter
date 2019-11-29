@@ -15,15 +15,15 @@ then
 fi
 
 echo trying ssh $GRAD_APPS whoami
-echo whoami should return gradapps almost instantly.. if hanging below you probably need to start up CSLAB vpn..
+echo ssh whoami should return "``gradapps''" almost instantly.. if hanging below start up CSLAB VPN..
 
 set -x
 ssh $GRAD_APPS whoami
 set -
 
-echo you should see "''"gradapps"``" above indicating that ssh has access to the right machine.
+#echo you should see "''"gradapps"``" above indicating that ssh has access to the right machine.
 
-read -p "hit enter to continue with $CMD... > " JUNK
+read -p "has ssh whoami returned ``gradapps''? hit enter to continue with $CMD... > " JUNK
 set -x
 $CMD
 
