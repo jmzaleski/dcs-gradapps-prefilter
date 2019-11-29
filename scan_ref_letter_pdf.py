@@ -10,9 +10,8 @@ def err_msg(*objs):
 
 import PyPDF3 #note weird name. obtained by pip3 install pypdf3
 import types # for SimpleNamespace
+import os,sys
 
-
-import os
 HOME_DIR = os.environ['HOME'] 
 if not os.path.exists(HOME_DIR): die("HOME_DIR", HOME_DIR, "does not exist")
 
@@ -26,7 +25,6 @@ if not os.path.exists(MSCAC_DIR): die(MSCAC_DIR, "does not exist")
 #dir where transcripts, sop, cv live
 MSCAC_PAPERS_DIR = os.path.join(MSCAC_DIR,"public_html","papers")
 if not os.path.exists(MSCAC_PAPERS_DIR): die(MSCAC_PAPERS_DIR, "does not exist")
-
 
 MSCAC_PROFILE_DATA_ROOT_DIR = os.path.join(MSCAC_DIR,"public_html","data")
 if not os.path.exists(MSCAC_PROFILE_DATA_ROOT_DIR): die(MSCAC_PROFILE_DATA_ROOT_DIR, "does not exist")
@@ -160,7 +158,6 @@ def print_as_csv(app_num, file_list):
                 ))
 
 if __name__ == '__main__':
-    import os, sys
     path = os.path.join(MSCAC_PAPERS_DIR,'326','file326-3.pdf')
     
     if False:
@@ -194,6 +191,19 @@ if __name__ == '__main__':
         for fn in pdf_meta_data_for_fn:
             print(os.path.basename(fn), pdf_meta_data_for_fn[fn])
         print("}end dump pdf_meta_data_for_fn")
+        
+    def write_as_csv_file(filtered_dict_of_app_num, csv_file_name):
+        "try csv package to get the badzo's out of this program and into excel"
+        import csv
+        with open(csv_file_name, mode='w') as csv_file:
+            csv_writer = csv.writer(csv_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+            for app_num in filtered_dict_of_app_num:
+                for fn in dict[app_num]:
+                    csv_writer.writerow([app_num,os.path.basename(fn),
+                                             pdf_meta_data_for_fn[fn].creationdate,
+                                             pdf_meta_data_for_fn[fn].author,
+                                             pdf_meta_data_for_fn[fn].creator])
+        os.system("ls -l %s" % csv_file_name)
 
     def scan(app_num, getter):
         file_list = dict[app_num]
@@ -210,151 +220,55 @@ if __name__ == '__main__':
                 return False
         return True
 
+    def fancy_scan(dict_on_app_num, getter, fn):
+        d = {}
+        for app_num in dict_on_app_num:
+            if scan(app_num, getter):
+                d[app_num] = app_num
+        write_as_csv_file(d,fn)
+        return d
+               
     if VERBOSE:
         pretty_print("112",dict["112"])
         print(scan("112",lambda fn: pdf_meta_data_for_fn[fn].creationdate))
-    
-    cd = {}
-    for app_num in dict:
-        if scan(app_num, lambda fn: pdf_meta_data_for_fn[fn].creationdate):
-            cd[app_num] = app_num
-    cd_c = {}
-    for app_num in cd.keys():
-        if scan(app_num, lambda fn: pdf_meta_data_for_fn[fn].creator):
-            cd_c[app_num] = app_num
-    cd_c_a = {}
-    for app_num in cd.keys():
-        if scan(app_num, lambda fn: pdf_meta_data_for_fn[fn].author):
-            cd_c_a[app_num] = app_num
-            
-    for app_num in cd_c_a.keys():
-        pretty_print(app_num,dict[app_num])
-    exit(0)
-    
-
+        
     # real work here. compare the metadata for the files submitted by each app
     # it's suspicious if they are all created on the same day
     # more so if by the same creator program
     # smoking bloody gun if author same too
-    # TODO: clean up this code! I'd give it a D if i were grading it
-    import datetime
-    creation_dates_match = {}
-    creator_match = {}
-    author_match = {}
-    for app_num in dict:
-        file_list = dict[app_num]
-        if len(file_list) < 2:
-            continue
-        fn0 = file_list[0]
-        cd0 = pdf_meta_data_for_fn[fn0].creationdate
-        if not cd0:
-            continue #ugh. 
-        flg = True
-        for fn in file_list:
-            #print(fn,pdf_meta_data_for_fn[fn])
-            d = pdf_meta_data_for_fn[fn].creationdate
-            if not d or pdf_meta_data_for_fn[fn].creationdate != cd0:
-                flg = False
-                break
-        if flg:
-            creation_dates_match[app_num] = app_num
-            #print("app_num", app_num, "creation dates match", cd0)
+    
+    ## cd = {}  # creation date same
+    ## for app_num in dict:
+    ##     if scan(app_num, lambda fn: pdf_meta_data_for_fn[fn].creationdate):
+    ##         cd[app_num] = app_num
+    ## write_as_csv_file(cd,"creationdate.csv")
+    
+    
+    ## cd_c = {}   # creation date and creator program same
+    ## for app_num in cd.keys():
+    ##     if scan(app_num, lambda fn: pdf_meta_data_for_fn[fn].creator):
+    ##         cd_c[app_num] = app_num
+    ## write_as_csv_file(cd_c,"creationdate-creator.csv")
+    ## for app_num in cd.keys():
+    ##     if scan(app_num, lambda fn: pdf_meta_data_for_fn[fn].creator):
+    ##         cd_c[app_num] = app_num
+    ## write_as_csv_file(cd_c,"creationdate-creator.csv")
+
+    ## cd_c_a = {} # creation date and creator program and author same
+    ## for app_num in cd.keys():
+    ##     if scan(app_num, lambda fn: pdf_meta_data_for_fn[fn].author):
+    ##         cd_c_a[app_num] = app_num
+    ## write_as_csv_file(cd_c_a,"creationdate-author-creator.csv")
+    
+    cd       = fancy_scan(dict, lambda fn: pdf_meta_data_for_fn[fn].creationdate, "creationdate.csv")
+    cd_c     = fancy_scan(cd, lambda fn: pdf_meta_data_for_fn[fn].creator, "creationdate-creator.csv")
+    cd_c_a   = fancy_scan(cd_c, lambda fn: pdf_meta_data_for_fn[fn].author, "creationdate-creator-author.csv")
             
-            cr0  = pdf_meta_data_for_fn[fn0].creator
-            if not cr0:
-                continue
-            flg2 = True
-            for fn in file_list:
-                cr = pdf_meta_data_for_fn[fn].creator
-                if not cr or pdf_meta_data_for_fn[fn].creator != cr0:
-                    flg2 = False
-                    break
-            if flg2:
-                creator_match[app_num] = app_num
-                #print("app_num", app_num, "creator matches also", cr0)
-                flg3 = True
-                a0 = pdf_meta_data_for_fn[fn].author
-                if not a0:
-                    continue
-                for fn in file_list:
-                    a = pdf_meta_data_for_fn[fn].author
-                    if not a or pdf_meta_data_for_fn[fn].author != a0:
-                        flg3 = False
-                        break
-                if flg3:
-                    author_match[app_num] = app_num
-                    #print("app_num", app_num, "author match", a0)
-                
-    print("creation date match")
-    for app_num in creation_dates_match:
-        pretty_print(app_num, dict[app_num])
-    print("=========== end creationdate ============================\n\n\n")
-    print("creation date, creator match")
-    for app_num in creator_match:
-        pretty_print(app_num, dict[app_num])
-    print("=========== end creationdate,creator ============================\n\n\n")
-    print("creation date, creator and author match")
-    for app_num in author_match:
-        pretty_print(app_num, dict[app_num])
-    print("=========== end creationdate,creator,author match ============================\n\n\n")
-    for app_num in author_match:
-        pretty_print(app_num, dict[app_num])
-
-    def write_as_csv_file(filtered_dict_of_app_num, csv_file_name):
-        "try csv package to get the badzo's out of this program and into excel"
-        import csv
-        with open(csv_file_name, mode='w') as csv_file:
-            csv_writer = csv.writer(csv_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-            for app_num in filtered_dict_of_app_num:
-                for fn in dict[app_num]:
-                    csv_writer.writerow([app_num,os.path.basename(fn),
-                                             pdf_meta_data_for_fn[fn].creationdate,
-                                             pdf_meta_data_for_fn[fn].author,
-                                             pdf_meta_data_for_fn[fn].creator])
-        os.system("ls -l %s" % csv_file_name)
-
-    write_as_csv_file(creation_dates_match,"creationdate.csv")
-    write_as_csv_file(creator_match,"creationdate-creator.csv")
-    write_as_csv_file(author_match,"creationdate-author-creator.csv")
-
-    print( cd == creation_dates_match)
-    print("cd",cd.keys())
-    print("creation_dates_match",creation_dates_match.keys())
-    for app_num in cd:
-        if not app_num in creation_dates_match:
-            print(app_num, "in cd but not in creation_dates_match")
-    for app_num in creation_dates_match:
-        if not app_num in cd:
-            print(app_num, "in creation_dates_match but not in cd")
-
-    scd = set(cd.keys())
-    sc_d = set(creation_dates_match.keys())
-    l = list(cd.keys())
-    l.sort()
-    print("cd.keys()",l)
-    ll = list(creation_dates_match.keys())
-    ll.sort()
-    print("creation_dates_match.keys()",ll)
-    #print("cd.keys()",list(cd.keys()).sort())
-    #print("creation_dates_match.keys()",list(creation_dates_match.keys()).sort())
-    print("xor",scd.symmetric_difference(sc_d))
-    print("intersection",scd.intersection(sc_d))
-    print("difference",scd.difference(sc_d))
-    for app_num in scd.difference(sc_d):
+    for app_num in cd_c_a.keys():
         pretty_print(app_num,dict[app_num])
 
-    # import csv
-    # with open(csv_file_name, mode='w') as csv_file:
-    #     csv_writer = csv.writer(csv_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-    #     for app_num in author_match:
-    #         for fn in dict[app_num]:
-    #             csv_writer.writerow([app_num,os.path.basename(fn),
-    #                                      pdf_meta_data_for_fn[fn].creationdate,
-    #                                      pdf_meta_data_for_fn[fn].author,
-    #                                      pdf_meta_data_for_fn[fn].creator])
-    # os.system("ls -l %s" % csv_file_name)
-        
     exit(0)
+    
 
 # PDF date/time format http://www.verypdf.com/pdfinfoeditor/pdf-date-format.htm
 # (D:YYYYMMDDHHmmSSOHH'mm')
