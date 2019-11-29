@@ -206,6 +206,7 @@ if __name__ == '__main__':
         os.system("ls -l %s" % csv_file_name)
 
     def scan(app_num, getter):
+        "what to call it?? look for repeats of values returned by getter across files"
         file_list = dict[app_num]
         if len(file_list) < 2:
             # only one file? can't deduce anything
@@ -221,53 +222,27 @@ if __name__ == '__main__':
         return True
 
     def fancy_scan(dict_on_app_num, getter, fn):
+        "maybe over factoring because we can"
         d = {}
         for app_num in dict_on_app_num:
             if scan(app_num, getter):
                 d[app_num] = app_num
         write_as_csv_file(d,fn)
         return d
-               
-    if VERBOSE:
-        pretty_print("112",dict["112"])
-        print(scan("112",lambda fn: pdf_meta_data_for_fn[fn].creationdate))
         
-    # real work here. compare the metadata for the files submitted by each app
-    # it's suspicious if they are all created on the same day
-    # more so if by the same creator program
-    # smoking bloody gun if author same too
-    
-    ## cd = {}  # creation date same
-    ## for app_num in dict:
-    ##     if scan(app_num, lambda fn: pdf_meta_data_for_fn[fn].creationdate):
-    ##         cd[app_num] = app_num
-    ## write_as_csv_file(cd,"creationdate.csv")
-    
-    
-    ## cd_c = {}   # creation date and creator program same
-    ## for app_num in cd.keys():
-    ##     if scan(app_num, lambda fn: pdf_meta_data_for_fn[fn].creator):
-    ##         cd_c[app_num] = app_num
-    ## write_as_csv_file(cd_c,"creationdate-creator.csv")
-    ## for app_num in cd.keys():
-    ##     if scan(app_num, lambda fn: pdf_meta_data_for_fn[fn].creator):
-    ##         cd_c[app_num] = app_num
-    ## write_as_csv_file(cd_c,"creationdate-creator.csv")
-
-    ## cd_c_a = {} # creation date and creator program and author same
-    ## for app_num in cd.keys():
-    ##     if scan(app_num, lambda fn: pdf_meta_data_for_fn[fn].author):
-    ##         cd_c_a[app_num] = app_num
-    ## write_as_csv_file(cd_c_a,"creationdate-author-creator.csv")
-    
     cd       = fancy_scan(dict, lambda fn: pdf_meta_data_for_fn[fn].creationdate, "creationdate.csv")
-    cd_c     = fancy_scan(cd, lambda fn: pdf_meta_data_for_fn[fn].creator, "creationdate-creator.csv")
-    cd_c_a   = fancy_scan(cd_c, lambda fn: pdf_meta_data_for_fn[fn].author, "creationdate-creator-author.csv")
+    cd_c     = fancy_scan(cd,   lambda fn: pdf_meta_data_for_fn[fn].creator,      "creationdate-creator.csv")
+    cd_c_a   = fancy_scan(cd_c, lambda fn: pdf_meta_data_for_fn[fn].author,       "creationdate-creator-author.csv")
             
     for app_num in cd_c_a.keys():
         pretty_print(app_num,dict[app_num])
+        
+    if False: #example
+        pretty_print("112",dict["112"])
+        print(scan("112",lambda fn: pdf_meta_data_for_fn[fn].creationdate))
 
     exit(0)
+
     
 
 # PDF date/time format http://www.verypdf.com/pdfinfoeditor/pdf-date-format.htm
