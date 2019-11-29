@@ -35,6 +35,9 @@ if not os.path.exists(VIEWER): die(VIEWER, "does not exist")
 
 GREP_SGS_NUM = os.path.join(TOOLS_DIR,"grep-sgs-num.sh")
 if not os.path.exists(GREP_SGS_NUM): die(GREP_SGS_NUM, "does not exist")
+
+GREP_ONE_SGS_NUM = os.path.join(TOOLS_DIR,"grep-one-sgs-app-num.sh")
+if not os.path.exists(GREP_ONE_SGS_NUM): die(GREP_SGS_NUM, "does not exist")
     
 #file listing which apps are complete
 COMPLETE_FILE = os.path.join(MSCAC_DIR,"public_html/admin/applicationStatus")
@@ -551,27 +554,39 @@ if __name__ == '__main__':
     
     # check for repeat prefiltering. grep for app_nums in OFN_DIR
     buf = " "
+    badness = False
+    bad = []
     for app_num in app_num_list:
-        buf += str(app_num_to_profile_data[app_num][GradAppsField.SGS_NUM]) + " "
-    os.system(GREP_SGS_NUM + buf)
+        cmd = "%s %s %s" % (GREP_ONE_SGS_NUM, str(app_num), str(app_num_to_profile_data[app_num][GradAppsField.SGS_NUM])) 
+        if not os.system(cmd) == 0:
+            badness = True
+            bad.append(app_num)
+    if badness:
+        print("some of these app_nums appear to have been pre-filtered earlier")
+        print(bad)
+        resp = input("d to delete them from list and continue? q to exit > ")
+        if resp.lower().startswith('q'):
+            exit(0)
+        if resp.lower().startswith('d'):
+            for bad_app_num in bad:
+                app_num_list.remove(bad_app_num)
+            print("remaining applications:", app_num_list)
     
     pretty_print_app_list(app_num_to_profile_data,app_num_list,sys.stdout,None)
 
-    try:
-        print("prefilter above " + str(len(app_num_list)) + " applications?")
-        print("matching filter:", uni_filter_regexp)
-        response = input("enter to continue, q to exit > ")
-    except:
-        response = None
-        import traceback
-        traceback.print_exc(file=sys.stderr)
-        die("oops")
+    if VERBOSE:
+        try:
+            print("prefilter above " + str(len(app_num_list)) + " applications?")
+            print("matching filter:", uni_filter_regexp)
+            response = input("enter to continue, q to exit > ")
+        except:
+            response = None
+            import traceback
+            traceback.print_exc(file=sys.stderr)
+            die("oops")
         
-    if response == None or (len(response) > 0 and not response.lower().startswith("y")):
-        die("actually entering any char bails out.. only hitting enter alone continues.. :)")
-
-    
-
+        if response == None or (len(response) > 0 and not response.lower().startswith("y")):
+            die("actually entering any char bails out.. only hitting enter alone continues.. :)")
 
     from menu import PrefilterMenu
 
@@ -626,10 +641,10 @@ if __name__ == '__main__':
         cv_fn =  pdf_file_no_for_app(app_num,2)
         transcript_fn =  pdf_file_no_for_app(app_num,3)
         print(os.path.basename(sop_fn),os.path.basename(cv_fn),os.path.basename(transcript_fn))
-        os.system(VIEWER  + " " + sop_fn + " " + cv_fn + " " + transcript_fn)
         print('user_ref=$(cat /tmp/user_ref) && open "https://confs.precisionconference.com/~mscac20/submissionProfile?paperNumber=' + app_num +'&userRef=$user_ref"')
         resp = ""
         while True:
+            os.system(VIEWER  + " " + sop_fn + " " + cv_fn + " " + transcript_fn)
             profile_data = app_num_to_profile_data[app_num]
                         
             ########## menu for actual decision
