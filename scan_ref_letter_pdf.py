@@ -236,9 +236,20 @@ if __name__ == '__main__':
     write_as_csv_file(cd_c_a,"creationdate-creator-author.csv")
     a       = filter_same(fn_for_app_num, lambda fn: pdf_meta_data_for_fn[fn].author)
     write_as_csv_file(a, "author.csv")
-    
+
+    def concoct_profile_log_file_name_from_app_number(app_num):
+        """concoct full path of profile.data file from app_num.
+           Depends on inside knowledge of how gradapps stores its stuff"""
+        log_file_fn = os.path.join(MSCAC_PROFILE_DATA_ROOT_DIR,app_num,"log")
+        if not os.path.exists(log_file_fn):
+            die("cannot find", log_file_fn)
+        assert os.path.exists(log_file_fn)
+        return log_file_fn
+
     for app_num in a: #cd_c_a:
         pretty_print(app_num,fn_for_app_num[app_num])
+        os.system("grep reportFinalized " + concoct_profile_log_file_name_from_app_number(app_num))
+        
         
     if False: #example
         pretty_print("112",fn_for_app_num["112"])
