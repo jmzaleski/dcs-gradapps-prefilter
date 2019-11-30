@@ -205,36 +205,39 @@ if __name__ == '__main__':
                                              pdf_meta_data_for_fn[fn].creator])
         os.system("ls -l %s" % csv_file_name)
 
-    def scan(fn_list, getter):
-        "what to call it?? look for repeats of values returned by getter across files"
-        file_list = fn_list
-        if len(file_list) < 2:
-            # only one file? can't deduce anything
-            return False
-        fn_iter = iter(file_list)
-        x0 = getter(next(fn_iter))
-        if not x0:
-            return False
-        for fn in fn_iter:
-            xi = getter(fn)
-            if not xi or xi != x0:
-                return False
-        return True
 
-    def fancy_scan(dict_on_app_num, getter, fn):
-        "maybe over factoring because we can"
+    def filter_same(dict_on_app_num, getter):
+        "maybe overdoing the factoring just because we can"
+        def scan_files(fn_list, getter):
+            "what to call it?? look for repeats of values returned by getter across files"
+            if len(fn_list) < 2:
+                return False # only one file? nothing to suspect
+            fn_iter = iter(fn_list)
+            x0 = getter(next(fn_iter))
+            if not x0:
+                return False
+            for fn in fn_iter:
+                xi = getter(fn)
+                if not xi or xi != x0:
+                    return False
+            return True
+        
         d = {}
         for app_num in dict_on_app_num:
-            if scan(fn_for_app_num[app_num], getter):
+            if scan_files(fn_for_app_num[app_num], getter):
                 d[app_num] = app_num
-        write_as_csv_file(d,fn)
         return d
         
-    cd       = fancy_scan(fn_for_app_num, lambda fn: pdf_meta_data_for_fn[fn].creationdate, "creationdate.csv")
-    cd_c     = fancy_scan(cd,             lambda fn: pdf_meta_data_for_fn[fn].creator,      "creationdate-creator.csv")
-    cd_c_a   = fancy_scan(cd_c,           lambda fn: pdf_meta_data_for_fn[fn].author,       "creationdate-creator-author.csv")
-            
-    for app_num in cd_c_a.keys():
+    cd       = filter_same(fn_for_app_num, lambda fn: pdf_meta_data_for_fn[fn].creationdate)
+    cd_c     = filter_same(cd,             lambda fn: pdf_meta_data_for_fn[fn].creator)
+    cd_c_a   = filter_same(cd_c,           lambda fn: pdf_meta_data_for_fn[fn].author)
+    write_as_csv_file(cd, "creationdate.csv")
+    write_as_csv_file(cd_c, "creationdate-creator.csv")
+    write_as_csv_file(cd_c_a,"creationdate-creator-author.csv")
+    a       = filter_same(fn_for_app_num, lambda fn: pdf_meta_data_for_fn[fn].author)
+    write_as_csv_file(a, "author.csv")
+    
+    for app_num in a: #cd_c_a:
         pretty_print(app_num,fn_for_app_num[app_num])
         
     if False: #example
