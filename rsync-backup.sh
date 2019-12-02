@@ -21,9 +21,10 @@ set -x
 ssh $GRAD_APPS whoami
 set -
 
-#echo you should see "''"gradapps"``" above indicating that ssh has access to the right machine.
+echo you should see "''"gradapps"``" above indicating that ssh has access to the right machine.
+echo $CMD
 
-read -p "has ssh whoami returned ``gradapps''? hit enter to continue with $CMD... > " JUNK
+read -p "hit enter to rsync backup server to . > " JUNK
 set -x
 $CMD
 
