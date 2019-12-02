@@ -188,6 +188,7 @@ def parse_args():
 
 def pdf_file_no_for_app(app_number,nn):
     "concoct full path to transcript, cv, sop files for an app_num in papers dir"
+    #gradapps keeps the documents submitted by applicant in papers directory
     return os.path.join(MSCAC_PAPERS_DIR, str(app_number), "file" + app_num + "-" + str(nn) + ".pdf")
 
 def shorten_uni_name(uni_name):
@@ -370,7 +371,7 @@ def prefilter_prompt(app_num,profile_data,ix,n):
     gpa = extract_gpa_from_multiple_fields(profile_data)
     if gpa == None:
         gpa = 0.0
-    prompt = "%d)%d/%d %s %s-%03d-%.1f" % (app_num, ix, n, profile_data[GradAppsField.GENDER],
+    prompt = "%d) %d/%d %s %s-%03d-%.1f" % (app_num, ix, n, profile_data[GradAppsField.GENDER],
                                                   shorten_uni_name(uni_name),
                                                   ranking, gpa)
     #print("prompt", prompt)
@@ -553,28 +554,42 @@ if __name__ == '__main__':
                           )
     
     # check for repeat prefiltering. grep for app_nums in OFN_DIR
-    buf = " "
-    badness = False
-    bad = []
-    for app_num in app_num_list:
-        cmd = "%s %s %s" % (GREP_ONE_SGS_NUM, str(app_num), str(app_num_to_profile_data[app_num][GradAppsField.SGS_NUM])) 
-        if not os.system(cmd) == 0:
-            badness = True
-            bad.append(app_num)
-    if badness:
-        print("some of these app_nums appear to have been pre-filtered earlier")
-        print(bad)
-        resp = input("d to delete them from list and continue? q to exit > ")
-        if resp.lower().startswith('q'):
-            exit(0)
-        if resp.lower().startswith('d'):
-            for bad_app_num in bad:
-                app_num_list.remove(bad_app_num)
-            print("remaining applications:", app_num_list)
+    grep_arg = "\|".join(map(lambda app_num: app_num_to_profile_data[app_num][GradAppsField.SGS_NUM], app_num_list))
+    cmd = "%s '%s'" % (GREP_SGS_NUM, grep_arg)
+    #print(cmd)
+    if not os.system(cmd) == 0:
+        sys.stdout.flush()
+        resp = input("found apps in csv files.. continuing with n**2 (SLOW!!) grep loop to find the files..")
+        if resp.lower() == 'n':
+            buf = " "
+            badness = False
+            bad = []
+            #this is n**2  and actually takes a long time. if we need it rewrite to be linear in number of files.
+            for app_num in app_num_list:
+                cmd = "%s %s %s" % (GREP_ONE_SGS_NUM, str(app_num), str(app_num_to_profile_data[app_num][GradAppsField.SGS_NUM])) 
+                if not os.system(cmd) == 0:
+                    badness = True
+                    bad.append(app_num)
+                    msg = app_num_to_profile_data[app_num][GradAppsField.PREFILTER_STATUS]
+                    if len(msg) == 0:
+                        msg = "prefilter status not set"
+                    print( "==>> in profile.data", msg)
+            if badness:
+                print("some of these app_nums appear to have been pre-filtered earlier")
+                print(bad)
+                sys.stdout.flush() 
+                resp = input("d to delete them from list and continue? q to exit > ")
+                if resp.lower().startswith('q'):
+                    exit(0)
+                if resp.lower().startswith('d'):
+                    for bad_app_num in bad:
+                        app_num_list.remove(bad_app_num)
+                    print("remaining applications:", app_num_list)
     
     pretty_print_app_list(app_num_to_profile_data,app_num_list,sys.stdout,None)
 
-    if VERBOSE:
+    # print list before starting and prompt 
+    if True:
         try:
             print("prefilter above " + str(len(app_num_list)) + " applications?")
             print("matching filter:", uni_filter_regexp)
@@ -599,10 +614,11 @@ if __name__ == '__main__':
                            'x' : "NCS-Reject:   not enough CS. Fails prefilter",
                            'y' : "NCS-Pass:     not enough CS but stellar enough to pass prefilter",
                            'z' : "NCS-Star:     not enough CS.. yet stellar",
-                           'S' : "SKIP setting Prefilter_Status"
+                           'S' : "SKIP setting Prefilter_Status",
+                           'Q' : "Quit without saving"
                         }
     #order to display menu items in 
-    response_code_list = ['r', 's','v','g','u','x','y','z','S']
+    response_code_list = ['r', 's','v','g','u','x','y','z','S','Q']
 
     #map responses to gradapps prefilter status column values
     gradapps_response_map = { 's' : "Pass-Star",
@@ -655,6 +671,9 @@ if __name__ == '__main__':
             
             menu = PrefilterMenu(response_code_list, menu_line_dict , prompt)
             
+            #########
+            # menu reading decision
+            #########
             resp = menu.menu()
             if resp == None:
                 print("\n\nwonky reponse (interrupt key pressed?) from menu",resp)
@@ -662,7 +681,11 @@ if __name__ == '__main__':
             
             if resp.startswith('S'):
                 print("okay, skipping", app_num)
-                break ######### goto next application (or once did) 
+                break ######### goto next application (or once did)
+
+            if resp.startswith('Q'):
+                print("really quit, eh?. Nothing will be saved. dregs will be left behind. exiting..")
+                exit(0)
             
             gradapps_response = gradapps_response_map[resp]
             #print("resp:", resp, gradapps_response)
@@ -686,7 +709,7 @@ if __name__ == '__main__':
                 write_to_new_file(uni_filter_regexp,OFN, decisions) # 
             #except:
             except Exception as e:
-                input("hello2")
+                #input("hello2")
                 print(e)
                 import traceback
                 traceback.print_exc(file=sys.stderr)
