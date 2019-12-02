@@ -170,22 +170,18 @@ if __name__ == '__main__':
     # scan the files in each app and stash the PDF meta information for each one
     
     fn_for_app_num       = {} # maps app_num to list of files in app_num/reviews
-    reviews_for_app_num  = {} # maps app_num to list of files in app_num/reviews
-    pdf_meta_data_for_fn = {}
-    
+    pdf_meta_data_for_fn = {} # SimpleNamespace containing PDF metadata from file
     for root, dirs, files in os.walk(MSCAC_PROFILE_DATA_ROOT_DIR):
         for file in files:
             if file.endswith('pdf') or file.endswith('PDF'): 
                 (dir,fn) = os.path.split(root)
                 (dir2,app_num) =os.path.split(dir)
-                #print(app_num)
                 if not app_num in fn_for_app_num:
                     fn_for_app_num[app_num] = []
-                    reviews_for_app_num[app_num] = []
                 ffn = os.path.join(root, file)
                 fn_for_app_num[app_num].append(ffn)
-                reviews_for_app_num[app_num].append(ffn)
                 pdf_meta_data_for_fn[ffn] = get_info_ns(ffn)
+                
     if VERBOSE:
         print("dump pdf_meta_data_for_fn{")
         for fn in pdf_meta_data_for_fn:
@@ -193,7 +189,7 @@ if __name__ == '__main__':
         print("}end dump pdf_meta_data_for_fn")
         
     def write_as_csv_file(filtered_dict_of_app_num, csv_file_name):
-        "try csv package to get the badzo's out of this program and into excel"
+        "use csv package to write suspect applications to csv file excel"
         import csv
         with open(csv_file_name, mode='w') as csv_file:
             csv_writer = csv.writer(csv_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
@@ -206,35 +202,36 @@ if __name__ == '__main__':
         os.system("ls -l %s" % csv_file_name)
 
 
-    def filter_same(dict_on_app_num, getter):
-        "maybe overdoing the factoring just because we can"
-        def scan_files(fn_list, getter):
-            "what to call it?? look for repeats of values returned by getter across files"
+    def scan_apps(dict_on_app_num, pdf_metadata_property_getter):
+        "scan the all the apps PDF files for an app looking for those that pdf_metadata_property_getter returns the same data for"
+        def scan_files(fn_list, pdf_metadata_property_getter):
+            "scan the all the app's PDF files looking for those that pdf_metadata_property_getter returns the same data for"
             if len(fn_list) < 2:
                 return False # only one file? nothing to suspect
             fn_iter = iter(fn_list)
-            x0 = getter(next(fn_iter))
+            x0 = pdf_metadata_property_getter(next(fn_iter))
             if not x0:
                 return False
             for fn in fn_iter:
-                xi = getter(fn)
+                xi = pdf_metadata_property_getter(fn)
                 if not xi or xi != x0:
                     return False
             return True
-        
+
+        # scan the apps looking for suspicious reference files
         d = {}
         for app_num in dict_on_app_num:
-            if scan_files(fn_for_app_num[app_num], getter):
+            if scan_files(fn_for_app_num[app_num], pdf_metadata_property_getter):
                 d[app_num] = app_num
         return d
         
-    cd       = filter_same(fn_for_app_num, lambda fn: pdf_meta_data_for_fn[fn].creationdate)
-    cd_c     = filter_same(cd,             lambda fn: pdf_meta_data_for_fn[fn].creator)
-    cd_c_a   = filter_same(cd_c,           lambda fn: pdf_meta_data_for_fn[fn].author)
+    cd       = scan_apps(fn_for_app_num, lambda fn: pdf_meta_data_for_fn[fn].creationdate)
+    cd_c     = scan_apps(cd,             lambda fn: pdf_meta_data_for_fn[fn].creator)
+    cd_c_a   = scan_apps(cd_c,           lambda fn: pdf_meta_data_for_fn[fn].author)
     write_as_csv_file(cd, "creationdate.csv")
     write_as_csv_file(cd_c, "creationdate-creator.csv")
     write_as_csv_file(cd_c_a,"creationdate-creator-author.csv")
-    a       = filter_same(fn_for_app_num, lambda fn: pdf_meta_data_for_fn[fn].author)
+    a       = scan_apps(fn_for_app_num, lambda fn: pdf_meta_data_for_fn[fn].author)
     write_as_csv_file(a, "author.csv")
 
     def concoct_profile_log_file_name_from_app_number(app_num):
@@ -248,6 +245,8 @@ if __name__ == '__main__':
 
     for app_num in a: #cd_c_a:
         pretty_print(app_num,fn_for_app_num[app_num])
+        # flush python buffers or interpreter will buffer output and won't interleave with grep output
+        sys.stdout.flush() 
         os.system("grep reportFinalized " + concoct_profile_log_file_name_from_app_number(app_num))
         
         
@@ -255,9 +254,6 @@ if __name__ == '__main__':
         pretty_print("112",fn_for_app_num["112"])
         print(scan("112",lambda fn: pdf_meta_data_for_fn[fn].creationdate))
 
-    exit(0)
-
-    
 
 # PDF date/time format http://www.verypdf.com/pdfinfoeditor/pdf-date-format.htm
 # (D:YYYYMMDDHHmmSSOHH'mm')
