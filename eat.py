@@ -559,8 +559,9 @@ if __name__ == '__main__':
     #print(cmd)
     if not os.system(cmd) == 0:
         sys.stdout.flush()
-        resp = input("found apps in csv files.. continuing with n**2 (SLOW!!) grep loop to find the files..")
-        if resp.lower() == 'n':
+        print("found apps in log file that suggest they are repeats.. do you want to do grep loop to find the files?")
+        resp = input("y to do n**2 (SLOW!!) grep loop to find the apps  > ")
+        if resp.lower() == 'y':
             buf = " "
             badness = False
             bad = []
@@ -658,69 +659,73 @@ if __name__ == '__main__':
         transcript_fn =  pdf_file_no_for_app(app_num,3)
         print(os.path.basename(sop_fn),os.path.basename(cv_fn),os.path.basename(transcript_fn))
         print('user_ref=$(cat /tmp/user_ref) && open "https://confs.precisionconference.com/~mscac20/submissionProfile?paperNumber=' + app_num +'&userRef=$user_ref"')
-        resp = ""
-        while True:
-            os.system(VIEWER  + " " + sop_fn + " " + cv_fn + " " + transcript_fn)
-            profile_data = app_num_to_profile_data[app_num]
-                        
-            ########## print a condensed "info panel" about the applicant.
-            print(prefilter_info_panel( app_num, profile_data,dcs_status_map_ix, len(app_num_list)),end='')
-            
-            prompt = "%s enter letter for prefilter_status decision > " % (
-                prefilter_prompt(int(app_num), profile_data, dcs_status_map_ix, len(app_num_list)) )
-            
-            menu = PrefilterMenu(response_code_list, menu_line_dict , prompt)
-            
-            #########
-            # menu reading decision TODO: refactor into separate function
-            #########
-            resp = menu.menu()
-            if resp == None:
-                print("\n\nwonky reponse (interrupt key pressed?) from menu",resp)
-                continue
-            
-            if resp.startswith('S'):
-                print("okay, skipping", app_num)
-                break ######### goto next application (or once did)
+        
+        def show_prefilter_menu(app_num):
+            "first attempt at refactoring to fix nasty control flow"
+            resp = ""
+            while True:
+                os.system(VIEWER  + " " + sop_fn + " " + cv_fn + " " + transcript_fn)
+                profile_data = app_num_to_profile_data[app_num]
 
-            if resp.startswith('Q'):
-                print("really quit, eh?. Nothing will be saved. dregs will be left behind. exiting..")
-                print("decisions left on local machine in",OFN)
-                print("prefilter left on local machine in",BFN)
-                #TODO: print out rsync/ssh commands to put these files away?
-                exit(0)
-            
-            gradapps_response = gradapps_response_map[resp]
-            #print("resp:", resp, gradapps_response)
+                ########## print a condensed "info panel" about the applicant.
+                print(prefilter_info_panel( app_num, profile_data,dcs_status_map_ix, len(app_num_list)),end='')
 
-            if gradapps_response == None:
-                print("gotta choose something here. looping back to same application")
-                continue
+                prompt = "%s enter letter for prefilter_status decision > " % (
+                    prefilter_prompt(int(app_num), profile_data, dcs_status_map_ix, len(app_num_list)) )
 
-            try:                    
-                decisions[profile_data[GradAppsField.SGS_NUM]] = gradapps_response
-                #TODO: fix this searching through string value for state
-                if re.search("Reject", gradapps_response):
-                    print("skip adding", app_num, "to dcs_status_map because rejected")
-                else:
-                    dcs_status_map[profile_data[GradAppsField.SGS_NUM]] = prefilter_status_field(profile_data)
-                    write_to_new_file("dcs app status",BFN, dcs_status_map)
-                    dcs_status_map_ix += 1
-                                
-                ########## paranoidly, write every time
-                # megaparanoid would be to copy file each time to tmp
-                write_to_new_file(uni_filter_regexp,OFN, decisions) # 
-            #except:
-            except Exception as e:
-                #input("hello2")
-                print(e)
-                import traceback
-                traceback.print_exc(file=sys.stderr)
-                print(OFN, "something when wrong writing.. please try enter", resp,"again")
-                print("""Note: if you get stuck looping in here only way out is to control-z and kill this job""")
-                resp = ""
-                continue
-            break
+                menu = PrefilterMenu(response_code_list, menu_line_dict , prompt)
+
+                #########
+                # menu reading decision TODO: refactor into separate function
+                #########
+                resp = menu.menu()
+                if resp == None:
+                    print("\n\nwonky reponse (interrupt key pressed?) from menu",resp)
+                    continue
+
+                if resp.startswith('S'):
+                    print("okay, skipping", app_num)
+                    return ######### goto next application (or once did)
+
+                if resp.startswith('Q'):
+                    print("really quit, eh?. Nothing will be saved. dregs will be left behind. exiting..")
+                    print("decisions left on local machine in",OFN)
+                    print("prefilter left on local machine in",BFN)
+                    #TODO: print out rsync/ssh commands to put these files away?
+                    return
+
+                gradapps_response = gradapps_response_map[resp]
+
+                if gradapps_response == None:
+                    print("gotta choose something here. looping back to same application")
+                    continue
+
+                try:                    
+                    decisions[profile_data[GradAppsField.SGS_NUM]] = gradapps_response
+                    #TODO: fix this searching through string value for state
+                    if re.search("Reject", gradapps_response):
+                        print("skip adding", app_num, "to dcs_status_map because rejected")
+                    else:
+                        dcs_status_map[profile_data[GradAppsField.SGS_NUM]] = prefilter_status_field(profile_data)
+                        write_to_new_file("dcs app status",BFN, dcs_status_map)
+
+                    ########## paranoidly, write every time
+                    # megaparanoid would be to copy file each time to tmp
+                    write_to_new_file(uni_filter_regexp,OFN, decisions) 
+                    return
+                except Exception as e:
+                    #input("hello2")
+                    print(e)
+                    import traceback
+                    traceback.print_exc(file=sys.stderr)
+                    print(OFN, "something when wrong writing.. please try enter", resp,"again")
+                    print("""Note: if you get stuck looping in here only way out is to control-z and kill this job""")
+                    resp = ""
+                    continue
+                
+        show_prefilter_menu(app_num)
+        dcs_status_map_ix += 1
+        
 
     if len(decisions) == 0:
         print("you skipped all applicants. no decisions made. exiting..")
