@@ -523,7 +523,7 @@ if __name__ == '__main__':
     for app_num in app_num_to_profile_data.keys():
         profile_data = app_num_to_profile_data[app_num]
         institution = profile_data[GradAppsField.DCS_UNION_INSTITUTION]
-        if VERBOSE: print("institution",uni_filter_regexp, institution)
+        if VERBOSE: print("institution",institution)
         #TODO: re.compile ?
         if not re.search(uni_filter_regexp, institution):
             if VERBOSE: print("skip", app_num, "because", institution, "not matched by", uni_filter_regexp)
@@ -545,7 +545,11 @@ if __name__ == '__main__':
                 print("skip", app_num, "because CV does not exist")
             else:
                 app_num_list.append(app_num)
-
+                
+    if len(app_num_list) == 0:
+        if cmd_line_parm_ns.skip_prefiltered:
+            print("you have --skip-prefiltered active. perhaps no matching apps remain?")
+        die("no app matches university", uni_filter_regexp)
 
     if cmd_line_parm_ns.sort:
         #TODO this re-sorts by GPA. bug? maybe should leave sort by app_num_list as above
@@ -556,8 +560,11 @@ if __name__ == '__main__':
     
     # check for repeat prefiltering. grep for app_nums in OFN_DIR
     grep_arg = "\|".join(map(lambda app_num: app_num_to_profile_data[app_num][GradAppsField.SGS_NUM], app_num_list))
+    if len(grep_arg) == 0:
+        print(app_num_list)
+        die("no sgs number for app_num", app_num)
     cmd = "%s '%s'" % (GREP_SGS_NUM, grep_arg)
-    #print(cmd)
+
     if not os.system(cmd) == 0:
         sys.stdout.flush()
         print("found apps in log file that suggest they are repeats.. do you want to do grep loop to find the files?")
@@ -652,6 +659,7 @@ if __name__ == '__main__':
     decisions = {}
     dcs_status_map = {}
     dcs_status_map_ix = 0
+    #TODO: use Enumerate to eliminate dcs_status_map_ix 
     for app_num in app_num_list:
         #concoct path of app_num "papers"
         # file-NNN-1.pdf is transcript
@@ -664,6 +672,7 @@ if __name__ == '__main__':
         def show_prefilter_menu(app_num):
             """first attempt at refactoring to fix nasty control flow.
             returns true if should continue filtering, false if should bail to rsync"""
+            #TODO: factor this guy out of the outer loop. how to cleanly handle all the closed over vars?
             resp = ""
             while True:
                 os.system(VIEWER  + " " + sop_fn + " " + cv_fn + " " + transcript_fn)
