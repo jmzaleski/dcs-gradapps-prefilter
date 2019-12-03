@@ -663,16 +663,16 @@ if __name__ == '__main__':
             os.system(VIEWER  + " " + sop_fn + " " + cv_fn + " " + transcript_fn)
             profile_data = app_num_to_profile_data[app_num]
                         
-            ########## menu for actual decision
+            ########## print a condensed "info panel" about the applicant.
             print(prefilter_info_panel( app_num, profile_data,dcs_status_map_ix, len(app_num_list)),end='')
             
-            prompt = "%s enter letter indicating prefilter_status > " % (
+            prompt = "%s enter letter for prefilter_status decision > " % (
                 prefilter_prompt(int(app_num), profile_data, dcs_status_map_ix, len(app_num_list)) )
             
             menu = PrefilterMenu(response_code_list, menu_line_dict , prompt)
             
             #########
-            # menu reading decision
+            # menu reading decision TODO: refactor into separate function
             #########
             resp = menu.menu()
             if resp == None:
@@ -685,6 +685,9 @@ if __name__ == '__main__':
 
             if resp.startswith('Q'):
                 print("really quit, eh?. Nothing will be saved. dregs will be left behind. exiting..")
+                print("decisions left on local machine in",OFN)
+                print("prefilter left on local machine in",BFN)
+                #TODO: print out rsync/ssh commands to put these files away?
                 exit(0)
             
             gradapps_response = gradapps_response_map[resp]
