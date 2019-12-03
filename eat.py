@@ -519,6 +519,7 @@ if __name__ == '__main__':
     
     # now that have read all the data, filter per command line options into app_num_list
     app_num_list = []
+
     for app_num in app_num_to_profile_data.keys():
         profile_data = app_num_to_profile_data[app_num]
         institution = profile_data[GradAppsField.DCS_UNION_INSTITUTION]
@@ -661,7 +662,8 @@ if __name__ == '__main__':
         print('user_ref=$(cat /tmp/user_ref) && open "https://confs.precisionconference.com/~mscac20/submissionProfile?paperNumber=' + app_num +'&userRef=$user_ref"')
         
         def show_prefilter_menu(app_num):
-            "first attempt at refactoring to fix nasty control flow"
+            """first attempt at refactoring to fix nasty control flow.
+            returns true if should continue filtering, false if should bail to rsync"""
             resp = ""
             while True:
                 os.system(VIEWER  + " " + sop_fn + " " + cv_fn + " " + transcript_fn)
@@ -685,14 +687,13 @@ if __name__ == '__main__':
 
                 if resp.startswith('S'):
                     print("okay, skipping", app_num)
-                    return ######### goto next application (or once did)
+                    return True ######### goto next application (or once did)
 
                 if resp.startswith('Q'):
                     print("really quit, eh?. Nothing will be saved. dregs will be left behind. exiting..")
                     print("decisions left on local machine in",OFN)
                     print("prefilter left on local machine in",BFN)
-                    #TODO: print out rsync/ssh commands to put these files away?
-                    return
+                    return False
 
                 gradapps_response = gradapps_response_map[resp]
 
@@ -712,7 +713,7 @@ if __name__ == '__main__':
                     ########## paranoidly, write every time
                     # megaparanoid would be to copy file each time to tmp
                     write_to_new_file(uni_filter_regexp,OFN, decisions) 
-                    return
+                    return True
                 except Exception as e:
                     #input("hello2")
                     print(e)
@@ -723,8 +724,9 @@ if __name__ == '__main__':
                     resp = ""
                     continue
                 
-        show_prefilter_menu(app_num)
         dcs_status_map_ix += 1
+        if not show_prefilter_menu(app_num):
+            break
         
 
     if len(decisions) == 0:
