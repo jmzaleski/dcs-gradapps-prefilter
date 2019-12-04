@@ -367,15 +367,8 @@ def prefilter_prompt(app_num,profile_data,ix,n):
         ranking = int(uni_ranking[uni_name])
     except:
         ranking = 1001
-    gpa = extract_gpa_from_multiple_fields(profile_data)
-    if gpa == None:
-        gpa = 0.0
-    ## prompt = "%d) %d/%d %s %s-%03d-%.1f" % (app_num, ix, n, profile_data[GradAppsField.GENDER],
-    ##                                               shorten_uni_name(uni_name),
-    ##                                               ranking, gpa)
     prompt = "%d) %d/%d %s %s %03d" % (app_num, ix, n, profile_data[GradAppsField.GENDER],
-                                                  prefilter_status_field(profile_data), ranking)
-    #print("prompt", prompt)
+                                       prefilter_status_field(profile_data), ranking)
     return prompt
 
     
