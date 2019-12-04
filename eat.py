@@ -212,22 +212,21 @@ def extract_gpa(profile_data, u_field_name,gpa_field_name):
     "WIP extract gpa from text field attempting to work around common applicant mistakes"
     if not u_field_name in profile_data.keys():
         return None
-    uni = profile_data[u_field_name]
-    # if not re.search(uni_filter_regexp, uni): 
-    #     return None
     if not gpa_field_name in profile_data:
         return None
     gpa_str = profile_data[gpa_field_name]
     try:
-        return float(gpa_str)
+        return float(gpa_str) #normal case where applicant entered a number..
     except:
-        #some students take it into their heads to enter "3.999/4", or "89% (first class honours)"
+        #some applicants take it into their heads to enter "3.999/4", or "89% (first class honours)"
         fields = re.compile("[%/]").split(gpa_str)
-        if len(fields) == 2:
+        if len(fields) > 1:
             try:
+                # last try.. if first field is a number return that.
                 return float(fields[0])
             except:
                 return None
+        else:
             return None
 
 def extract_gpa_from_multiple_fields(profile_data):
@@ -371,9 +370,11 @@ def prefilter_prompt(app_num,profile_data,ix,n):
     gpa = extract_gpa_from_multiple_fields(profile_data)
     if gpa == None:
         gpa = 0.0
-    prompt = "%d) %d/%d %s %s-%03d-%.1f" % (app_num, ix, n, profile_data[GradAppsField.GENDER],
-                                                  shorten_uni_name(uni_name),
-                                                  ranking, gpa)
+    ## prompt = "%d) %d/%d %s %s-%03d-%.1f" % (app_num, ix, n, profile_data[GradAppsField.GENDER],
+    ##                                               shorten_uni_name(uni_name),
+    ##                                               ranking, gpa)
+    prompt = "%d) %d/%d %s %s %03d" % (app_num, ix, n, profile_data[GradAppsField.GENDER],
+                                                  prefilter_status_field(profile_data), ranking)
     #print("prompt", prompt)
     return prompt
 
@@ -439,33 +440,27 @@ def  batch_hack(app_num_to_profile_data, completed_app_dict):
         print("%s,%s" % (sgs_num, prefilter_status_field(profile_data)))
     exit(0) #make sure batch goes no further
 
-def  sams_batch_hack(app_num_to_profile_data, completed_app_dict):
+def  sams_batch_hack(app_num_to_profile_data):
     "this printed out a csv file which we used to set ALL dcs application status fields to the prefilter one"
     app_num_list = []
     for app_num in app_num_to_profile_data.keys():
         profile_data = app_num_to_profile_data[app_num]
-        institution = profile_data[GradAppsField.DCS_UNION_INSTITUTION]
-        if VERBOSE: print("institution",uni_filter_regexp, institution)
-        if not app_num in completed_app_dict.keys():
-            if VERBOSE:print( app_num, "not complete")
-            #continue
-        elif len(profile_data[GradAppsField.PREFILTER_STATUS]) == 0:
-            if VERBOSE: print(app_num, "prefilter_status not set")
-            #continue
+        ## if len(profile_data[GradAppsField.DCS_STATUS]) != 0:
+        ##     if VERBOSE: print(app_num, "skip because DCS_STATUS already set to", profile_data[GradAppsField.DCS_STATUS])
+        ##     continue
         app_num_list.append(app_num)
-    #print(app_num_list)
 
-    #print(prefilter_status_map[1])
+    if len(app_num_list)==0:
+        die("sams_batch_hack: no apps remain after filtering.. nothing to do")
+        return
+    print("CSV file created by sams_batch_hack: sets dcs_application_status")
     for app_num in app_num_list:
         profile_data = app_num_to_profile_data[app_num]
-        # prefilter_dec = int(profile_data[GradAppsField.PREFILTER_STATUS])
-        # if prefilter_dec == 1 or prefilter_dec == 4:
-        #     continue #skip reject
         sgs_num = profile_data[GradAppsField.SGS_NUM]
-        #print(sgs_num, prefilter_status_map[prefilter_dec],prefilter_status_field(profile_data))
-        #print("%s,%s" % (sgs_num, prefilter_status_field(profile_data)))
+        if VERBOSE: print(app_num,end='')
         print("%s,%s" % (sgs_num, prefilter_status_field(profile_data)))
-    exit(0) #make sure batch goes no further
+        sys.stdout.flush()
+
     
 def find_app_numbers_in_filesystem(public_html_data_dir):
     """find all the app numbers in the system by recursing the tree. each dir containing
@@ -514,8 +509,19 @@ if __name__ == '__main__':
 
     if VERBOSE: print("app_num_to_profile_data",app_num_to_profile_data)
 
-    # this is the spot to write hacky scripts that see all the data..
-    #sams_batch_hack(app_num_to_profile_data, completed_app_dict) #reset all prefilter_status
+    ## print("prefilter_prompt", prefilter_status_field(app_num_to_profile_data["858"]))
+    ## exit(0)
+    # this is the spot to run scripts that see all the profile.data files and do stuff
+    # like prepare a csv file to curl to the gradapps server
+    #
+    if False:
+        try:
+            sams_batch_hack(app_num_to_profile_data) #reset all dcs application status
+        except:
+            import traceback
+            traceback.print_exc(file=sys.stderr)
+            die("batch script throws")
+        exit(0)
     
     # now that have read all the data, filter per command line options into app_num_list
     app_num_list = []
