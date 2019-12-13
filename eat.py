@@ -205,8 +205,6 @@ def shorten_uni_name(uni_name):
             .rstrip(" ")
             .replace(" ","_") )
 
-    
-
 def extract_gpa(profile_data, u_field_name,gpa_field_name):
     "WIP extract gpa from text field attempting to work around common applicant mistakes"
     if not u_field_name in profile_data.keys():
@@ -307,11 +305,11 @@ def pretty_print_app_list(app_num_to_profile_data_dict,num_list,file_whatsit,ses
             # being run before starting the session, no decisions yet
             prefilter_status = extract_prefilter_status(profile_data)
 
-        print(app_num,
+        print("%5s" % app_num,
                   profile_data[GradAppsField.GENDER],
                   "%11s"   % prefilter_status,
                   "%5.1f" % extract_gpa_for_sorted(profile_data),
-                  sgs_num,
+                  "%12s" % sgs_num,
                   profile_data[GradAppsField.DCS_UNION_INSTITUTION].rstrip('|'),
                   file=file_whatsit
                   )
@@ -596,7 +594,7 @@ if __name__ == '__main__':
     pretty_print_app_list(app_num_to_profile_data,app_num_list,sys.stdout,None)
 
     # print list before starting and prompt 
-    if True:
+    if False:
         try:
             print("prefilter above " + str(len(app_num_list)) + " applications?")
             print("matching filter:", uni_filter_regexp)
@@ -622,7 +620,7 @@ if __name__ == '__main__':
                            'y' : "NCS-Pass:     not enough CS but stellar enough to pass prefilter",
                            'z' : "NCS-Star:     not enough CS.. yet stellar",
                            'S' : "SKIP setting Prefilter_Status",
-                           'Q' : "Quit without saving"
+                           'Q' : "Quit without saving (remove temp files)"
                         }
     #order to display menu items in 
     response_code_list = ['r', 's','v','g','u','x','y','z','S','Q']
@@ -692,15 +690,20 @@ if __name__ == '__main__':
                     print("\n\nwonky reponse (interrupt key pressed?) from menu",resp)
                     continue
 
+
                 if resp.startswith('S'):
                     print("okay, skipping", app_num)
                     return True ######### goto next application (or once did)
 
                 if resp.startswith('Q'):
-                    print("really quit, eh?. Nothing will be saved. dregs will be left behind. exiting..")
-                    print("decisions left on local machine in",OFN)
-                    print("prefilter left on local machine in",BFN)
+                    print("really quit, eh?. Nothing will be saved. dregs will be removed..")
+                    ## print("decisions left on local machine in",OFN)
+                    ## print("prefilter left on local machine in",BFN)
+                    os.system( "rm  %s %s" % (OFN, BFN) )
                     return False
+
+                #paste to clipboard
+                os.system("/bin/echo -n '%s' | pbcopy" %  prefilter_info_panel( app_num, profile_data,dcs_status_map_ix, len(app_num_list)))
 
                 gradapps_response = gradapps_response_map[resp]
 
@@ -708,7 +711,7 @@ if __name__ == '__main__':
                     print("gotta choose something here. looping back to same application")
                     continue
 
-                try:                    
+                try:
                     decisions[profile_data[GradAppsField.SGS_NUM]] = gradapps_response
                     #TODO: fix this searching through string value for state
                     if re.search("Reject", gradapps_response):
@@ -736,8 +739,9 @@ if __name__ == '__main__':
                     continue
                 
         dcs_status_map_ix += 1
+
         if not show_prefilter_menu(app_num):
-            break
+            exit(0)
         
 
     if len(decisions) == 0:
