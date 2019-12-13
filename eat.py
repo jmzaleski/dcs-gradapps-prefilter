@@ -719,7 +719,11 @@ if __name__ == '__main__':
 
                     ########## paranoidly, write every time
                     # megaparanoid would be to copy file each time to tmp
-                    write_to_new_file(uni_filter_regexp,OFN, decisions) 
+                    write_to_new_file(uni_filter_regexp,OFN, decisions)
+                    #put this in clipboard, since i want to email it to people so often
+
+                    #could fire up email here for stars ?
+                    print("open -a Firefox.app 'mailto:sam@cs.toronto.edu,arvind@cs.toronto.edu?subject=star %s?cc=clair@cs.toronto.edu'" % 42)
                     return True
                 except Exception as e:
                     #input("hello2")
